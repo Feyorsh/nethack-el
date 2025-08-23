@@ -248,7 +248,8 @@ If CH is the character “f” for “conditions”, then the string “conditio
     (?H '("hitpoints-max" . "(%s)"))
     (?l '("dungeon-level" . "%s"))
     (?E '("experience" . "/%s"))
-    (?f "condition")))
+    (?f "condition")
+    (?v '("version" . "\n%s"))))
 
 ;; This is called upon from the C half, so it should be prefixed
 ;; “nhapi-” rather than “nh-”.

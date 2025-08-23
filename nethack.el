@@ -67,7 +67,7 @@
   :group 'nethack)
 
 (defcustom nethack-status-buffer-format
-  "n s d c i W C A S\nl g hH pP a eED t Grf"
+  "n s d c i W C A S\nl g hH pP a eED t Grfv"
   "Format string for the status in `nh-status-buffer'."
   :type '(string)
   :group 'nethack)

@@ -1,5 +1,11 @@
 2025-08-23  George Huebner  <george@feyor.sh>
 
+        * nethack.el (nethack-status-buffer-format): Support
+	OPTIONS=showvers in status (3.7.0 only).
+        * nethack-api.el (nh-status-char-to-format): Likewise.
+
+2025-08-23  George Huebner  <george@feyor.sh>
+
         * nethack.el (nh-sentinel): Use switch-to-buffer instead of pop-to-buffer to
 	avoid creating new windows after previous layout is restored.
         * nethack-api.el (nhapi-raw-print): Likewise.
