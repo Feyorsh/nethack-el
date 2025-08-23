@@ -818,12 +818,12 @@ buffer."
 
 ;; FIXME: xemacs propertize bug here
 (defun nhapi-end-menu (window prompt)
-  ""
   (with-current-buffer (nh-menu-buffer window)
     (let ((inhibit-read-only t))
       (goto-char (point-min))
-      (insert prompt)
-      (newline))))
+      (unless (string-empty-p prompt)
+        (insert prompt)
+        (newline)))))
 
 (defun nhapi-select-menu (menuid how)
   "Display the menu given by MENUID and put the buffer in
