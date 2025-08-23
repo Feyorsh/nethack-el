@@ -364,17 +364,6 @@ attribute, the new value, the old value, and the percent."
   "Map face with height less than the tile size (16 pixels)."
   :group 'nethack-faces)
 
-(defface nethack-pet-face
-  `((((type tty) (class color))
-     (:foreground "black" :background "white" :bold t))
-    (((class color) (background dark))
-     (:foreground "black" :background "white"))
-    (((class color) (background light))
-     (:foreground "white" :background "black"))
-    (t (:foreground "gray")))
-  "nethack white"
-  :group 'nethack-faces)
-
 
 
 ;;; Installation

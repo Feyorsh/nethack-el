@@ -1,5 +1,11 @@
 2025-08-24  George Huebner  <george@feyor.sh>
 
+        * nethack-api.el (nhapi-print-glyph): Instead of a type of glyph
+	(e.g. "pet"), take a face attribute (e.g. inverse) as an argument.
+	(nh-attr-face): Return a valid face if `attr` is already a face.
+
+2025-08-24  George Huebner  <george@feyor.sh>
+
         * nethack.el (nethack): New variable `nethack-environment` for
 	controlling environment variables passed to NetHack process.
 

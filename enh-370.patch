@@ -693,7 +693,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,486 @@
+@@ -0,0 +1,492 @@
++2025-08-23  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_print_glyph): Better handling of (ATR_INVERSE)
++	attributes (e.g. `OPTIONS=hilite_pile`). Propertize here instead
++	of deferring to nhapi.
++
 +2025-08-22  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c: Updated to NetHack-3.7.0_WIP, taking heavy inspiration from the curses port. Mostly fixing compiler warnings/errors and modifying the types of function parameters.
@@ -1180,9 +1186,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	s/nethack-api-updated-inventory/nethack-api-update-inventory/
 +	(WINLISP_VOID_RETVAL): added macro, called for every void
 +	function.
+
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1775 @@
+@@ -0,0 +1,1748 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -1591,30 +1598,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    default:
 +      return "nethack-atr-none-face";
 +  }
-+}
-+
-+static const char*
-+special_glyph_to_string(unsigned special)
-+{
-+  switch (special)
-+    {
-+    case MG_CORPSE:
-+      return "corpse";
-+    case MG_INVIS:
-+      return "invis";
-+    case MG_DETECT:
-+      return "detect";
-+    case MG_PET:
-+      return "pet";
-+    case MG_RIDDEN:
-+      return "ridden";
-+    }
-+
-+  /* If it's a combination, just return special. */
-+  if (special)
-+    return "special";
-+  else
-+    return "none";
 +}
 +
 +static const char*
@@ -2903,26 +2886,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    int	    color;
 +    unsigned special;
 +    int glyph;
++    int attr = -1;
 +
 +    glyph = glyphinfo->glyph;
 +    special = glyphinfo->gm.glyphflags;
 +    ch = glyphinfo->ttychar;
 +    color = glyphinfo->gm.sym.color;
 +
-+    /* If the user doesn't want to highlight the pet, then we erase
-+       the PET bit from special. In the lisp code the special argument
-+       will be 'pet if the glyph is a pet and will be printed in the
-+       color of the pet highlight face. But we don't want this if the
-+       user hasn't turned on hilite_pet. */
-+    if (!iflags.hilite_pet)
-+      {
-+        special &= ~MG_PET;
-+      }
++    if ((special & MG_PET) && iflags.hilite_pet) {
++        attr = iflags.wc2_petattr;
++    } else if ((special & (MG_DETECT | MG_BW_LAVA | MG_BW_ICE | MG_BW_SINK | MG_BW_ENGR)) && iflags.use_inverse) {
++        attr = ATR_INVERSE;
++    } else if ((special & MG_OBJPILE) && iflags.hilite_pile) {
++        attr = ATR_INVERSE;
++    }
 +
 +    if (window == WIN_MAP)
 +      {
-+        /* The last parameter, special, is optional. It is only
-+           present when the tile is special in some way. */
 +        lisp_cmd("print-glyph",
 +                 lisp_int(x);
 +                 lisp_int(y);
@@ -2930,8 +2910,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +                 lisp_int(glyph);
 +                 lisp_int(glyphinfo->gm.tileidx); // UNUSED
 +                 lisp_int(ch);
-+                 if (special)
-+                     lisp_literal(special_glyph_to_string(special)););
++                 if (attr != -1)
++                     lisp_literal(attr_to_string(attr)););
 +      }
 +    else
 +      lisp_cmd ("error",

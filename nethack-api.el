@@ -361,7 +361,7 @@ Values taken from
 http://fileformats.archiveteam.org/wiki/DEC_Special_Graphics_Character_Set,
 accessed 2021-04-23.")
 
-(defun nhapi-print-glyph (x y color glyph tile ch &optional special)
+(defun nhapi-print-glyph (x y color glyph tile ch &optional attr)
   "Insert glyph into `nh-map-buffer'."
   (set-buffer nh-map-buffer)
   (setq x (- x 1))                      ; FIXME: put this hack in C
@@ -389,17 +389,12 @@ accessed 2021-04-23.")
        ((or (nethack-options-set-p 'IBMgraphics) (string= "IBMgraphics" (nethack-options-set-p 'symset)))
         (nh-gamegrid-set-cell x y (decode-char 'cp437 ch) ch))
        (t (nh-gamegrid-set-cell x y ch)))
-      ;; If the glyph is a pet then color it with the
-      ;; nethack-pet-face.
-      (let ((color (if (eq special 'pet)
-                       'nethack-pet-face
-                     (aref nh-colors color))))
-        (set-text-properties (gamegrid-cell-offset x y)
-                             (1+ (gamegrid-cell-offset x y))
-                             `(face
-                               ,color
-                               glyph
-                               ,glyph))))))
+      (set-text-properties (gamegrid-cell-offset x y)
+                           (1+ (gamegrid-cell-offset x y))
+                           `(face
+                             ,(list (aref nh-colors color) (nh-attr-face attr))
+                             glyph
+                             ,glyph)))))
 
 (defun nhapi-yn-function (ques choices default)
   ""
