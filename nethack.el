@@ -411,6 +411,12 @@ installation."
   :type '(repeat string)
   :group 'nethack)
 
+(defcustom nethack-environment nil
+  "Additional environment variables to pass to NetHack process.
+See https://nethackwiki.com/wiki/Environment_variable for more information."
+  :type '(repeat string)
+  :group 'nethack)
+
 (defcustom nethack-version
   "3.6.6"
   "The NetHack version to download, install, and bulid."
@@ -637,8 +643,9 @@ The variable `nethack-program' is the name of the executable to run."
         ;; Start the process.
         (when (get-buffer nh-proc-buffer-name)
           (kill-buffer nh-proc-buffer-name))
-        (nethack-start (apply 'start-process "nh" nh-proc-buffer-name
-                              nethack-program nethack-program-args)))
+        (nethack-start (let ((process-environment (append nethack-environment process-environment)))
+                         (apply 'start-process "nh" nh-proc-buffer-name
+                                nethack-program nethack-program-args))))
     (nethack-install)))
 
 (defun nethack-is-running ()
