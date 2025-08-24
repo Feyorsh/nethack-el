@@ -50,7 +50,7 @@ include/tradstdc.h
 include/winlisp.h
 src/windows.c
 sys/unix/Makefile.src
-sys/unix/hints/linux-lisp
+sys/unix/hints/lisp
 util/makedefs.c
 win/tty/termcap.c
 win/lisp/ChangeLog

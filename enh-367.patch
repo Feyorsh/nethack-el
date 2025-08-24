@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
  #define EDITLEVEL 0
  
-+#define LISP_VERSION "0.13.2"
++#define LISP_VERSION "0.13.3"
 +
  #define COPYRIGHT_BANNER_A "NetHack, Copyright 1985-2023"
  #define COPYRIGHT_BANNER_B \
@@ -213,7 +213,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  worm.o: worm.c $(HACK_H) ../include/lev.h
  worn.o: worn.c $(HACK_H)
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
-+++ nethack/sys/unix/hints/linux-lisp	2025-03-31 01:38:41.266594125 -0500
++++ nethack/sys/unix/hints/lisp	2025-03-31 01:38:41.266594125 -0500
 @@ -0,0 +1,62 @@
 +#
 +# NetHack 3.6  linux $NHDT-Date: 1432512814 2015/05/25 00:13:34 $  $NHDT-Branch: master $:$NHDT-Revision: 1.12 $
@@ -308,7 +308,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,473 @@
+@@ -0,0 +1,478 @@
++2025-08-22  George Huebner  <george@feyor.sh>
++
++	* ../../sys/unix/hints/linux-lisp: Renamed to "lisp"
++	because it also works on macOS.
++
 +2025-03-31  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_update_inventory): If `perm_invent` set,
