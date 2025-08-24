@@ -53,6 +53,7 @@ src/mdlib.c
 src/options.c
 src/rip.c
 src/windows.c
+src/mail.c
 sys/unix/Makefile.src
 sys/unix/hints/lisp
 util/makedefs.c

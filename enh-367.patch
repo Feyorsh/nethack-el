@@ -155,6 +155,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef WINCHAIN
      { &chainin_procs, chainin_procs_init, chainin_procs_chain },
      { (struct window_procs *) &chainout_procs, chainout_procs_init,
+--- NetHack-NetHack-3.6.7_Released/src/mail.c	2025-08-24 12:00:55.818907703 -0500
++++ nethack/src/mail.c	2025-08-24 14:54:06.880969178 -0500
+@@ -692,7 +692,7 @@
+     if (!(mr = nh_getenv("MAILREADER")))
+         mr = DEF_MAILREADER;
+ 
+-    if (child(1)) {
++    if (child(0)) {
+         (void) execl(mr, mr, (char *) 0);
+         nh_terminate(EXIT_FAILURE);
+     }
 --- NetHack-NetHack-3.6.7_Released/sys/unix/Makefile.src	2023-02-15 15:52:57.000000000 -0600
 +++ nethack/sys/unix/Makefile.src	2025-03-31 01:38:34.624817803 -0500
 @@ -266,9 +266,12 @@
@@ -308,7 +319,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,484 @@
+@@ -0,0 +1,489 @@
++2025-08-23  George Huebner  <george@feyor.sh>
++
++	* mail.c (readmail): Call `child` with wt=0 to avoid calling
++	`raw_print` and `wait_synch`.
++
 +2025-08-23  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_print_glyph): Better handling of (ATR_INVERSE)
