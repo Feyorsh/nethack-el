@@ -18,17 +18,26 @@ All of the Elisp is GPLv2, and the patches are under the modified 3-clause BSD.
 * Macros
 * Event hooks
 * All the beauty that comes with Emacs
-* Play on remote `nethack-el` servers
 
-## Background
+## Project Status
+I am semi-actively adding new features and fixing bugs as of August 2025.
+I mostly work on things that affect how I play NetHack (e.g. my `nethackrc`), so please open an issue/PR if something doesn't work---it's likely I just don't use that feature and never ran into that particular issue.
 
-This is a fork of `nethack-el` where I attempt to update it to 3.6.~~6~~7.
+Some things on my to-do list are upstreaming my Nix derivation for nethack-el/NetHack lisp port into nixpkgs and potentially creating a package on MELPA.
+Also, I need to prevent the game from getting into a bad state when sending input to an "idle" window, e.g. opening your inventory and then trying to move your character on the map.
 
-Looked pretty dead when I first stumbled upon it, and also incompatible with
-anything newer than 3.4.3.  This is my go at making it work again.
+Some things that are _not_ maintained and likely never will be (unless someone opens a PR):
+- [nh-bot.el](./nh-bot.el)
+- [nethack-tiles.el](./nethack-tiles.el)/[slashem-tiles.el](./slashem-tiles.el) (X11-like interface with XPMs)
+- [nethack-nhlaunch.el](./nethack-nhlaunch.el) (use nethack-el on a server)
+- [nethack-keys-dvorak.el](./nethack-keys-dvorak.el)
 
-I'm also having a go at trying to make it parse `.nethackrc` for things like
-`MENUCOLORS` and `hilite_status`.
+> [!IMPORTANT]
+> nethack-el only supports versions 3.6.7 and 3.7.0-WIP of NetHack; older patches are kept in HEAD for convenience but you will likely have difficulty getting them to work.
+> Please do not open issues with using nethack-el with versions of NetHack older than 3.6.7.
+
+
+Previous repo: <https://github.com/be11ng/nethack-el>
 
 Old website: <http://savannah.nongnu.org/projects/nethack-el>
 
