@@ -1,0 +1,2960 @@
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this list of conditions
+    and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice, this list of
+    conditions and the following disclaimer in the documentation and/or other materials provided
+    with the distribution.
+ 3. The name of the author may not be used to endorse or promote products derived from this
+    software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+--- NetHack-NetHack-3.7.0_WIP/include/config.h	2025-08-24 10:26:20.390034350 -0500
++++ nethack/include/config.h	2025-08-24 10:32:05.576499096 -0500
+@@ -59,12 +59,13 @@
+ /* #define X11_GRAPHICS */   /* X11 interface */
+ /* #define QT_GRAPHICS */    /* Qt interface */
+ /* #define MSWIN_GRAPHICS */ /* Windows NT, CE, Graphics */
++/* #define LISP_GRAPHICS */ /* lisp interface */
+ 
+ /*
+  * Define the default window system.  This should be one that is compiled
+  * into your system (see defines above).  Known window systems are:
+  *
+- *      tty, X11, mac, amii, BeOS, Qt, Gem, Gnome, shim
++ *      tty, X11, mac, amii, BeOS, Qt, Gem, Gnome, lisp, shim
+  */
+ 
+ /* MAC also means MAC windows */
+@@ -141,6 +142,12 @@
+ #endif
+ #endif
+ 
++#ifdef LISP_GRAPHICS
++#ifndef DEFAULT_WINDOW_SYS
++#define DEFAULT_WINDOW_SYS "lisp"
++#endif
++#endif
++
+ #ifdef SHIM_GRAPHICS
+ #ifndef DEFAULT_WINDOW_SYS
+ #define DEFAULT_WINDOW_SYS "shim"
+--- NetHack-NetHack-3.7.0_WIP/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
++++ nethack/include/patchlevel.h	2025-08-24 10:32:05.576673554 -0500
+@@ -19,6 +19,8 @@
+  */
+ #define EDITLEVEL 130
+ 
++#define LISP_VERSION "0.13.3"
++
+ /*
+  * Development status possibilities.
+  */
+--- /dev/null	2025-08-24 10:32:36.147906000 -0500
++++ nethack/include/winlisp.h	2025-08-24 10:32:05.576758720 -0500
+@@ -0,0 +1,63 @@
++#ifndef WINLISP_H
++#define WINLISP_H
++
++#if defined(BOS) || defined(NHSTDC)
++#define DIMENSION_P int
++#else
++# ifdef WIDENED_PROTOTYPES
++#define DIMENSION_P unsigned int
++# else
++#define DIMENSION_P Dimension
++# endif
++#endif
++
++extern struct window_procs tty_procs;
++
++/* ### winlisp.c ### */
++extern void win_lisp_init(int);
++extern void lisp_init_nhwindows(int *, char **);
++extern void lisp_player_selection(void);
++extern void lisp_askname(void);
++extern void lisp_get_nh_event(void);
++extern void lisp_exit_nhwindows(const char *);
++extern void lisp_suspend_nhwindows(const char *);
++extern void lisp_resume_nhwindows(void);
++extern winid lisp_create_nhwindow(int);
++extern void lisp_clear_nhwindow(winid);
++extern void lisp_display_nhwindow(winid, boolean);
++extern void lisp_destroy_nhwindow(winid);
++extern void lisp_curs(winid, int, int);
++extern void lisp_status_update(int, genericptr_t, int, int, int, unsigned long *);
++extern void lisp_putstr(winid, int, const char *);
++extern void lisp_display_file(const char *, boolean);
++extern void lisp_start_menu(winid, unsigned long);
++extern void lisp_add_menu(winid, const glyph_info *, const ANY_P*,
++			              char, char, int, int, const char *, unsigned);
++extern void lisp_end_menu(winid, const char *);
++extern int lisp_select_menu(winid, int, menu_item **);
++extern char lisp_message_menu(char, int, const char *);
++extern void lisp_update_inventory(int);
++extern void lisp_mark_synch(void);
++extern void lisp_wait_synch(void);
++#ifdef CLIPPING
++extern void lisp_cliparound(int, int);
++#endif
++#ifdef POSITIONBAR
++extern void lisp_update_positionbar(char *);
++#endif
++extern void lisp_print_glyph(winid, coordxy, coordxy, const glyph_info*, const glyph_info*);
++extern void lisp_raw_print(const char *);
++extern void lisp_raw_print_bold(const char *);
++extern int lisp_nhgetch(void);
++extern int lisp_nh_poskey(coordxy *, coordxy *, int *);
++extern void lisp_nhbell(void);
++extern int lisp_doprev_message(void);
++extern char lisp_yn_function(const char *, const char *, char);
++extern void lisp_getlin(const char *, char *);
++extern int lisp_get_ext_cmd(void);
++extern void lisp_number_pad(int);
++extern void lisp_delay_output(void);
++
++extern win_request_info * lisp_ctrl_nhwindow(winid, int, win_request_info *);
++
++#endif /* WINLISP_H */
+--- NetHack-NetHack-3.7.0_WIP/include/winprocs.h	2025-08-24 14:59:57.571179579 -0500
++++ nethack/include/winprocs.h	2025-08-24 15:30:38.894335251 -0500
+@@ -11,7 +11,7 @@
+ #endif
+ 
+ enum wp_ids { wp_tty = 1, wp_X11, wp_Qt, wp_mswin, wp_curses,
+-              wp_chainin, wp_chainout, wp_safestartup, wp_shim,
++              wp_chainin, wp_chainout, wp_safestartup, wp_lisp, wp_shim,
+               wp_hup, wp_guistubs, wp_ttystubs,
+ #ifdef OUTDATED_STUFF
+               wp_mac, wp_Gem, wp_Gnome, wp_amii, wp_amiv,
+--- NetHack-NetHack-3.7.0_WIP/src/mdlib.c	2025-08-24 14:59:57.651359718 -0500
++++ nethack/src/mdlib.c	2025-08-24 15:30:38.895115826 -0500
+@@ -139,6 +139,9 @@
+ #ifdef MSWIN_GRAPHICS /* win32 */
+     { "mswin", "Windows GUI", TRUE },
+ #endif
++#ifdef LISP_GRAPHICS
++    { "lisp", "lisp", TRUE },
++#endif
+ #ifdef SHIM_GRAPHICS
+     { "shim", "NetHack Library Windowing Shim", TRUE },
+ #endif
+@@ -304,6 +307,12 @@
+ #if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
+     Sprintf(eos(outbuf), "-%d", EDITLEVEL);
+ #endif
++#ifdef LISP_GRAPHICS
++    Sprintf(eos(outbuf), " lisp-patch");
++#endif
++#ifdef LISP_VERSION
++    Sprintf(eos(outbuf), " %s", LISP_VERSION);
++#endif
+     return outbuf;
+ }
+ 
+--- NetHack-NetHack-3.7.0_WIP/src/options.c	2025-08-24 14:59:57.659282869 -0500
++++ nethack/src/options.c	2025-08-24 15:30:38.895976359 -0500
+@@ -3158,7 +3158,7 @@
+             bad_negation(allopt[optidx].name, TRUE);
+             retval = optn_err;
+         } else if (op != empty_optstr) {
+-#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS)
++#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS)
+             int itmp = match_str2attr(op, FALSE);
+ 
+             if (itmp == -1) {
+@@ -3181,8 +3181,8 @@
+         return retval;
+     }
+     if (req == get_val || req == get_cnf_val) {
+-#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS)
+-        if (WINDOWPORT(tty) || WINDOWPORT(curses)) {
++#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS)
++        if (WINDOWPORT(tty) || WINDOWPORT(curses) || WINDOWPORT(lisp)) {
+             Strcpy(opts, attr2attrname(iflags.wc2_petattr));
+         } else
+ #endif
+@@ -5301,8 +5301,8 @@
+             iflags.wc_ascii_map = negated;
+             break;
+         case opt_hilite_pet:
+-#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS)
+-            if (WINDOWPORT(tty) || WINDOWPORT(curses)) {
++#if defined(TTY_GRAPHICS) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS)
++            if (WINDOWPORT(tty) || WINDOWPORT(curses) || WINDOWPORT(lisp)) {
+                 /* if we're enabling hilite_pet and petattr isn't set,
+                    set it to Inverse; if we're disabling, leave petattr
+                    alone so that re-enabling will get current value back
+--- NetHack-NetHack-3.7.0_WIP/src/rip.c	2025-08-24 14:59:57.664589302 -0500
++++ nethack/src/rip.c	2025-08-24 15:30:38.896334855 -0500
+@@ -9,7 +9,7 @@
+    necessarily have to be used by a binary with multiple window-ports */
+ 
+ #if defined(TTY_GRAPHICS) || defined(X11_GRAPHICS) || defined(GEM_GRAPHICS) \
+-    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(SHIM_GRAPHICS)
++    || defined(DUMPLOG) || defined(CURSES_GRAPHICS) || defined(LISP_GRAPHICS) || defined(SHIM_GRAPHICS)
+ #define TEXT_TOMBSTONE
+ #endif
+ #if defined(mac) || defined(__BEOS__)
+--- NetHack-NetHack-3.7.0_WIP/src/windows.c	2025-08-24 10:26:20.500371140 -0500
++++ nethack/src/windows.c	2025-08-24 10:32:05.578014465 -0500
+@@ -42,6 +42,10 @@
+ #ifdef MSWIN_GRAPHICS
+ extern struct window_procs mswin_procs;
+ #endif
++#ifdef LISP_GRAPHICS
++#include "winlisp.h"
++extern struct window_procs lisp_procs;
++#endif
+ #ifdef SHIM_GRAPHICS
+ extern struct window_procs shim_procs;
+ #endif
+@@ -129,6 +133,9 @@
+ #ifdef MSWIN_GRAPHICS
+     { &mswin_procs, 0 CHAINR(0) },
+ #endif
++#ifdef LISP_GRAPHICS
++    { &lisp_procs, win_lisp_init CHAINR(0) },
++#endif
+ #ifdef SHIM_GRAPHICS
+     { &shim_procs, 0 CHAINR(0) },
+ #endif
+--- NetHack-NetHack-3.7.0_WIP/sys/unix/Makefile.src	2025-08-24 10:26:20.508439686 -0500
++++ nethack/sys/unix/Makefile.src	2025-08-24 10:32:05.578236714 -0500
+@@ -317,9 +317,12 @@
+ #	$(TARGETPFX)NHMenuWindow.o $(TARGETPFX)NHMapWindow.o \
+ #	$(TARGETPFX)tile.o
+ #
++# Files for the lisp port
++WINLISPSRC = ../win/lisp/winlisp.c tile.c
++WINLISPOBJ = winlisp.o tile.o
+ #
+-#WINSRC = $(WINTTYSRC)
+-#WINOBJ = $(WINTTYOBJ)
++#WINSRC = $(WINLISPSRC)
++#WINOBJ = $(WINLISPOBJ)
+ #
+ # Curses - Karl Garrison, Tangles
+ #WINSRC = $(WINCURSESSRC)
+@@ -364,6 +367,10 @@
+ # libraries for BeOS
+ WINBELIB = -lbe
+ #
++# libraries for lisp port
++WINLISPLIB =
++#WINLIB = $(WINLISPLIB)
++#
+ # libraries for curses port
+ # link with ncurses
+ WINCURSESLIB = -lncurses
+@@ -546,7 +553,7 @@
+ GENCSRC = #tile.c
+ 
+ # all windowing-system-dependent .c (for dependencies and such)
+-WINCSRC = $(WINTTYSRC) $(WINCURSESSRC) $(WINX11SRC) $(WINSHIMSRC)
++WINCSRC = $(WINTTYSRC) $(WINCURSESSRC) $(WINX11SRC) $(WINLISPSRC) $(WINSHIMSRC)
+ # all windowing-system-dependent .cpp (for dependencies and such)
+ WINCXXSRC = $(WINQTSRC) $(WINQT3SRC) $(WINBESRC)
+ 
+@@ -1270,7 +1277,7 @@
+ $(TARGETPFX)weapon.o: weapon.c $(HACK_H)
+ $(TARGETPFX)were.o: were.c $(HACK_H)
+ $(TARGETPFX)wield.o: wield.c $(HACK_H)
+-$(TARGETPFX)windows.o: windows.c $(HACK_H) ../include/dlb.h ../include/wintty.h
++$(TARGETPFX)windows.o: windows.c $(HACK_H) ../include/dlb.h ../include/wintty.h ../include/winlisp.h
+ $(TARGETPFX)wizard.o: wizard.c $(HACK_H)
+ $(TARGETPFX)wizcmds.o: wizcmds.c $(HACK_H) ../include/func_tab.h
+ $(TARGETPFX)worm.o: worm.c $(HACK_H)
+@@ -1299,6 +1306,9 @@
+ 	$(MOCPATH) -o $@ ../win/Qt/qt_xcmd.h
+ qt_yndlg.moc: $(QTn_H) ../win/Qt/qt_yndlg.h
+ 	$(MOCPATH) -o $@ ../win/Qt/qt_yndlg.h
++winlisp.o: ../win/lisp/winlisp.c $(HACK_H) ../include/winlisp.h \
++		../include/func_tab.h ../include/dlb.h ../include/patchlevel.h
++	$(CC) $(CFLAGS) -c ../win/lisp/winlisp.c
+ # DEPENDENCIES MUST END AT END OF FILE
+ # IF YOU PUT STUFF HERE IT WILL GO AWAY
+ # see make depend above
+--- /dev/null	2025-08-24 15:06:43.804608000 -0500
++++ nethack/sys/unix/hints/lisp	2025-08-24 15:06:10.501580150 -0500
+@@ -0,0 +1,405 @@
++# NetHack 3.7  unix-lisp.370 $NHDT-Date: 1693519390 2025/08/19 18:30:00 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.61 $
++# Copyright (c) Kenneth Lorber, Kensington, Maryland, 2007.
++# NetHack may be freely redistributed.  See license for details.
++#
++#---------------------------------------------------------------------
++# Lisp hints file
++# Tested on:
++#     - macOS Sequoia (with Nix)
++#
++# If this doesn't work for your distribution, consider making a new
++# hints file for it, rather than changing this one.
++# And let us know about it.
++#
++
++#-PRE
++
++WANT_DEFAULT=lisp
++
++HINTSVERSION := 370
++
++ifdef MAKEFILE_TOP
++ifeq ($(MAKELEVEL),0)
++PRECHECK+=checkmakefiles
++# all files included from this hints file get listed
++# in HINTSINCLNAMES (without suffix and without a path)
++HINTSINCLNAMES := compiler cross-pre1 cross-pre2 cross-post \
++		gbdates-pre gbdates-post \
++		multiw-1 multiw-2 misc \
++		multisnd1-pre multisnd2-pre multisnd-post
++HINTSINCLFILES := $(addsuffix .$(HINTSVERSION), $(HINTSINCLNAMES))
++endif
++endif
++
++#4. Other
++GAMEUID  = $(USER)
++GAMEGRP  = games
++
++# This gives better backtraces by making all core functions global; this
++# works around a limitation in glibc's backtrace(3) function.
++# This will be turned on automatically with CRASHREPROT.
++# 1 to enable, 0 to disable
++USE_NOSTATICFN = 1
++# If you want CRASHREPORT but absolutely don't want NOSTATICFN, define this:
++#USE_NONOSTATICFN = 1
++
++#-----------------------------------------------------------------------------
++#-INCLUDE cross-pre1.370
++
++
++#-----------------------------------------------------------------------------
++# You shouldn't need to change anything below here (in the hints file; if
++# you're reading this in Makefile augmented by hints, that may not be true).
++#
++
++ifeq "$(GIT)" "1"
++ifndef GITSUBMODULES
++GITSUBMODULES=1
++endif
++endif
++
++ifeq "$(CPPREGEX)" "1"
++REGEXOBJ=$(TARGETPFX)cppregex.o
++ifndef CPLUSPLUS_NEEDED
++CPLUSPLUS_NEEDED = 1
++endif
++endif
++
++ifeq "$(cppregex)" "1"
++REGEXOBJ=$(TARGETPFX)cppregex.o
++ifndef CPLUSPLUS_NEEDED
++CPLUSPLUS_NEEDED = 1
++endif
++endif
++
++ifeq "$(musl)" "1"
++MUSL=1
++endif
++ifeq "$(MUSL)" "1"
++ifneq "$(NOCRASHREPORT)" "1"
++NOCRASHREPORT=1
++endif
++WINCFLAGS += -DMUSL_LIBC
++# use this instead of col -bx
++COLCMD=../util/stripbs
++STRIPBS=../util/stripbs
++else
++WINCFLAGS += -DGNU_LIBC
++endif
++
++ifeq "$(NOCRASHREPORT)" "1"
++WINCFLAGS += -DNOCRASHREPORT
++endif
++
++# compiler.370 contains compiler detection and adjustments common
++# to both linux and macOS
++
++#-INCLUDE compiler.370
++
++# misc.370 must come after compiler.370
++# and after QTDIR is defined.
++#
++#-INCLUDE misc.370
++
++ifeq "$(USE_ASAN)" "1"
++CFLAGS+=-fsanitize=address
++LFLAGS+=-fsanitize=address
++endif
++
++ifeq "$(USE_UBSAN)" "1"
++CFLAGS+=-fsanitize=undefined
++LFLAGS+=-fsanitize=undefined
++endif
++
++ifeq "$(USE_CURSESLIB)" "1"
++# default
++CURSESLIB = -lncurses -ltinfo
++# If CURSES_UNICODE is defined, we need ncursesw.
++# Without CURSES_UNICODE the following simpler setting works.
++# CURSESLIB = -lncurses -ltinfo
++ifdef MAKEFILE_SRC
++comma:=,
++NCURSES_LFLAGS = $(shell pkg-config ncursesw --libs)
++NCURSES_CFLAGS = $(shell pkg-config ncursesw --cflags)
++ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
++ifeq (,$(findstring ncurses, $(NCURSES_LFLAGS)))
++#this indicates that pkg-config itself was unavailable
++NCURSES_LFLAGS = -lncursesw -ltinfo
++endif
++endif
++#$(info $(NCURSES_LFLAGS))
++ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
++HAVE_NCURSESW=0
++else
++HAVE_NCURSESW=1
++endif
++#$(info $(NCURSES_LFLAGS))
++#$(info HAVE_NCURSESW=$(HAVE_NCURSESW))
++ifeq "$(HAVE_NCURSESW)" "1"
++# remove unnecessary -Wl,-Bsymbolic-functions if present
++ifneq (,$(findstring -Wl$(comma)-Bsymbolic-functions, $(NCURSES_LFLAGS)))
++CURSESLIB = $(subst -Wl$(comma)-Bsymbolic-functions,,$(NCURSES_LFLAGS))
++else
++CURSESLIB = $(NCURSES_LFLAGS)
++endif
++endif      #HAVE_NCURSESW
++#$(info $(CURSESLIB))
++ifeq (,$(findstring ncursesw, $(NCURSES_LFLAGS)))
++ifeq (,$(findstring ncurses, $(NCURSES_LFLAGS)))
++#this indicates that pkg-config itself was unavailable
++NOPKGCONFIG = 1
++endif      #ncurses not in NCURSES_LFLAGS?
++endif      #ncursesw not in NCURSES_LFLAGS?
++#
++ifeq "$(NOPKGCONFIG)" "1"
++NCURSES_CFLAGS = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
++ifeq "$(HAVE_NCURSESW)" "1"
++ifeq (,$(wildcard /usr/include/ncursesw/curses.h))
++NCURSES_CFLAGS += -I/usr/include
++else
++NCURSES_CFLAGS += -I/usr/include/ncursesw
++endif
++NCURSES_LFLAGS = -lncursesw -ltinfo
++else       #HAVE_NCURSESW
++ifeq (,$(wildcard /usr/include/ncurses/curses.h))
++NCURSES_CFLAGS += -I/usr/include
++else
++NCURSES_CFLAGS += -I/usr/include/ncurses
++endif
++NCURSES_LFLAGS = -lncurses -ltinfo
++endif      #HAVE_NCURSESW
++endif      #NOPKGCONFIG
++endif      #MAKEFILE_SRC
++endif      #USE_CURSESLIB
++
++# NetHack sources control
++NHCFLAGS+=-DDLB
++NHCFLAGS+=-DHACKDIR=\"$(HACKDIR)\"
++NHCFLAGS+=-DDEFAULT_WINDOW_SYS=\"$(WANT_DEFAULT)\"
++NHCFLAGS+=-DNOTTYGRAPHICS -DLISP_GRAPHICS
++NHCFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
++NHCFLAGS+=-DTIMED_DELAY
++NHCFLAGS+=-DDUMPLOG
++NHCFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
++NHCFLAGS+=-DGREPPATH=\"/usr/bin/grep\"
++NHCFLAGS+=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
++#NHCFLAGS+=-DNOMAIL
++#NHCFLAGS+=-DEXTRA_SANITY_CHECKS
++#NHCFLAGS+=-DEDIT_GETLIN
++#NHCFLAGS+=-DSCORE_ON_BOTL
++#NHCFLAGS+=-DMSGHANDLER
++#NHCFLAGS+=-DTTY_TILES_ESCCODES
++#NHCFLAGS+=-DTTY_SOUND_ESCCODES
++#NHCFLAGS+=-DNO_CHRONICLE
++#NHCFLAGS+=-DLIVELOG
++#NHCFLAGS+=-DCHANGE_COLOR
++NHCFLAGS+=-DSELF_RECOVER
++ifdef WANT_WIN_CURSES
++NHCFLAGS+=$(NCURSES_CFLAGS)
++ifeq "$(HAVE_NCURSESW)" "1"
++NHCFLAGS+=-DCURSES_UNICODE
++else
++ifdef MAKEFILE_SRC
++$(info Attention: CURSES_UNICODE is not being defined without ncursesw)
++endif   #MAKEFILE_SRC
++endif   #HAVE_NCURSESW
++endif   #WANT_WIN_CURSES
++
++
++WINSRC += $(WINLISPSRC)
++WINOBJ0 += $(WINLISPOBJ)
++WINLIB += $(WINLISPLIB)
++
++ifeq "$(CCISCLANG)" "1"
++# clang-specific starts
++# clang-specific ends
++else
++# gcc-specific starts
++# LIBCFLAGS+=-DSIG_RET_TYPE=__sighandler_t
++# gcc-specific ends
++endif
++
++# WINCFLAGS set from multiw-2.370
++# SNDCFLAGS set from multisnd-pre.370
++CFLAGS+= $(WINCFLAGS)
++CFLAGS+= $(SNDCFLAGS)
++CFLAGS+= $(NHCFLAGS)
++CFLAGS+= $(LIBCFLAGS)
++
++# WINCFLAGS set from multiw-2.370
++# SNDCFLAGS set from multisnd-pre.370
++CCXXFLAGS+= $(WINCFLAGS)
++CCXXFLAGS+= $(SNDCFLAGS)
++CCXXFLAGS+= $(NHCFLAGS)
++CCXXFLAGS+= $(LIBCFLAGS)
++
++VARDATND =
++VARDATND0 =
++
++#ifdef WANT_WIN_CHAIN
++#HINTSRC=$(CHAINSRC)
++#HINTOBJ=$(CHAINOBJ)
++#endif # WANT_WIN_CHAIN
++
++ifdef MAKEFILE_SRC
++ifdef CURSESLIB
++WINLIB += $(CURSESLIB)
++endif   #CURSESLIB
++endif   #MAKEFILE_SRC
++
++LINK = $(CC)
++
++# prevent duplicate tile.o in WINOBJ
++WINOBJ = $(WINOBJ0) $(sort $(XTRAOBJ))
++# prevent duplicates in VARDATND if both X11 and Qt are being supported
++VARDATND += $(sort $(VARDATND0))
++
++GIT_HASH := $(shell echo `git rev-parse --verify HEAD` 2>&1)
++GIT_BRANCH := $(shell echo `git rev-parse --abbrev-ref HEAD` 2>&1)
++GIT_PREFIX := $(shell echo `git config nethack.substprefix` 2>&1)
++
++ifdef GIT_HASH
++GITHASH = -DNETHACK_GIT_SHA=\"$(GIT_HASH)\"
++endif
++ifdef GIT_BRANCH
++GITBRANCH = -DNETHACK_GIT_BRANCH=\"$(GIT_BRANCH)\"
++endif
++ifdef GIT_PREFIX
++GITPREFIX = -DNETHACK_GIT_PREFIX=\"$(GIT_PREFIX)\"
++endif
++
++ifdef WANT_LIBNH
++CFLAGS += -DSHIM_GRAPHICS -DNOTTYGRAPHICS -DNOSHELL -DLIBNH -fpic
++LIBNHSYSSRC = ../sys/libnh/libnhmain.c \
++		../sys/share/ioctl.c ../sys/share/unixtty.c \
++		../sys/unix/unixunix.c ../sys/unix/unixres.c \
++		../win/shim/winshim.c
++LIBNHSYSOBJ = $(TARGETPFX)libnhmain.o $(TARGETPFX)ioctl.o \
++		$(TARGETPFX)unixtty.o $(TARGETPFX)unixunix.o \
++		$(TARGETPFX)unixres.o $(TARGETPFX)winshim.o \
++		$(TARGETPFX)date.o
++#don't bother building the game executable as it will fail
++#without winshim
++override GAME=
++MOREALL += ( cd src ; $(MAKE) pregame ; $(MAKE) $(TARGETPFX)libnh.a )
++endif  # WANT_LIBNH
++
++SYSCONFCREATE = cp sys/unix/sysconf $(INSTDIR)/sysconf
++SYSCONFINSTALL = $(SYSCONFCREATE) && \
++	 $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf && \
++	 $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf && \
++	 chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
++SYSCONFENSURE = (if ! test -f $(INSTDIR)/sysconf ; then \
++	 $(SYSCONFCREATE) && \
++	 $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf && \
++	 $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf && \
++	 chmod $(VARFILEPERM) $(INSTDIR)/sysconf; fi );
++
++ifdef WANT_SOURCE_INSTALL
++PREFIX=$(abspath $(NHSROOT))
++#SHELLDIR=
++HACKDIR=$(PREFIX)/playground
++GAMEPERM = 0700
++VARFILEPERM = 0600
++VARDIRPERM = 0700
++CFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
++MOREALL=$(MAKE) install
++else #!WANT_SOURCE_INSTALL
++#PREFIX=/usr
++PREFIX=$(wildcard ~)/nh/install
++HACKDIR=$(PREFIX)/games/lib/nethackdir
++SHELLDIR = $(PREFIX)/games
++VARDIRPERM = 0755
++VARFILEPERM = 0600
++GAMEPERM = 0755
++endif #?WANT_SOURCE_INSTALL
++
++INSTDIR=$(HACKDIR)
++VARDIR = $(HACKDIR)
++
++ifneq "$(CCISCLANG)" ""
++# gdb may not be installed if clang is chosen compiler so the game
++# won't start in that case due to a sysconf error. Comment out
++# relevant lines in sysconf.
++POSTINSTALL+= sed -i -e 's;^GDBPATH=/usr/bin/gdb;\#GDBPATH=/usr/bin/gdb;' \
++		-e 's;PANICTRACE_GDB=1;PANICTRACE_GDB=0;' $(INSTDIR)/sysconf;
++endif
++
++ifeq '$(USE_NONOSTATICFN)' '1'
++CFLAGS += -DNONOSTATICFN
++else
++ifeq '$(USE_NOSTATICFN)' '1'
++CFLAGS += -DNOSTATICFN
++endif
++endif
++
++# Lua
++# when building liblua.a, avoid warning that use of tmpnam() should be
++# replaced by mkstemp(); the lua code doesn't use nethack's config.h so
++# this needs to be passed via make rather than defined in unixconf.h
++SYSCFLAGS=-DLUA_USE_LINUX
++ifdef GITSUBMODULES
++LUAFLAGS=CC='$(CC)' SYSCFLAGS='$(SYSCFLAGS)'
++ifneq "$(CCISCLANG)" ""
++# clang
++LUAFLAGS +=CWARNGCC=''
++endif   # clang
++override LUAHEADERS = submodules/lua
++override LUA2NHTOP = ../..
++override LUAMAKEFLAGS=$(LUAFLAGS)
++endif   # GITSUBMODULES
++DLLIB = -ldl
++
++# Only needed for GLIBC stack trace:
++LFLAGS+=-rdynamic
++
++# if TTY_TILES_ESCCODES
++#WINSRC += tile.c
++#WINOBJ += tile.o
++# endif
++
++CHOWN=true
++CHGRP=true
++
++# manpages directory
++MANDIR=/usr/share/man/man6
++#
++#-INCLUDE cross-pre2.370
++#
++
++#
++#-INCLUDE gbdates-pre.370
++#
++
++#-POST
++
++#
++#-INCLUDE gbdates-post.370
++#
++#
++#-INCLUDE multisnd-post.370
++#
++
++ifdef MAKEFILE_TOP
++ifeq ($(MAKELEVEL),0)
++.PHONY: checkmakefiles
++checkmakefiles:
++	@$(MAKE) -f sys/unix/Makefile.check \
++		HINTSFILE="$(HINTSFILE)" HINTSINCLFILES="$(HINTSINCLFILES)"
++endif
++endif
++
++ifdef WANT_LIBNH
++$(TARGETPFX)libnh.a: $(HOBJ) $(LIBNHSYSOBJ) ../lib/lua/liblua-$(LUA_VERSION).a
++	$(AR) rcs $@ $(HOBJ) $(LIBNHSYSOBJ) ../lib/lua/liblua-$(LUA_VERSION).a
++	@echo "$@ built."
++$(TARGETPFX)libnhmain.o : ../sys/libnh/libnhmain.c $(HACK_H)
++	$(CC) $(CFLAGS) -c -o$@ $<
++#dependency tool added this to Makefile.src
++#$(TARGETPFX)winshim.o : ../win/shim/winshim.c $(HACK_H)
++#	$(CC) $(CFLAGS) -c -o$@ $<
++endif  # WANT_LIBNH
++
++#
++#-INCLUDE cross-post.370
++#
+--- /dev/null	2025-08-24 15:06:43.804608000 -0500
++++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
+@@ -0,0 +1,486 @@
++2025-08-22  George Huebner  <george@feyor.sh>
++
++	* winlisp.c: Updated to NetHack-3.7.0_WIP, taking heavy inspiration from the curses port. Mostly fixing compiler warnings/errors and modifying the types of function parameters.
++	* winlisp.h: Likewise.
++	* sys/unix/hints/lisp: Renamed from "linux-lisp" because it also
++	works on macOS. Updated to the NetHack-3.7.0 way of doing things;
++	cross compilation is likely broken. HIC SUNT DRACONES
++
++2025-08-22  George Huebner  <george@feyor.sh>
++
++	* ../../sys/unix/hints/linux-lisp: Renamed to "lisp"
++	because it also works on macOS.
++
++2025-03-31  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_update_inventory): If `perm_invent` set,
++	redisplay the inventory in tandem with `nhapi-update-inventory`.
++
++2025-03-30  George Huebner  <george@feyor.sh>
++
++	* ../../sys/unix/hints/linux-lisp: Change `HACKDIR` and `SHELLDIR`
++	to be consistent with hints/linux.
++	* ../../include/winlisp.h (win_lisp_init): Add unused parameter
++	dir to fix incompatible-function-pointer-types compiler error.
++	* winlisp.c (win_lisp_init): Likewise.
++
++2022-06-01  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../include/tradstdc.h: Fix compilation issue with glibc 2.34.
++	Note that this is a fix that I really should have found out back
++	in 2022-01-23.  See S366-2 at nethack.org/v366/bugs.html.
++	* ../../include/patchlevel.h (LISP_VERSION): Bump to 0.13.2 since
++	the last change was compatible.
++
++2021-09-30  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (lisp_print_glyph): Remove redundant code.
++	* ../../include/patchlevel.h (LISP_VERSION): Bump to 0.13.1 since
++	the last change was compatible.
++
++2021-09-03  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (attr_to_string): Call `nh-attr-face' with full face
++	name.
++	* ../../include/patchlevel.h (LISP_VERSION): Bump to 0.13.0 since
++	the last change was incompatible.
++
++2021-04-09  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../include/patchlevel.h (LISP_VERSION): Bump to 0.12.0 since
++	the last change was incompatible.
++
++2021-04-07  Benjamin Yang  <be11ng@protonmail.com>
++
++	Fix extended commands.
++
++	* winlisp.c (extended_cmd_id): Give initial value `0'.
++	(lisp_get_ext_cmd): Prompt for extended command only when
++	`extended_cmd_id' is not equal to `0'.  Reset `extended_cmd_id' to
++	`0' if it is equal.
++
++2021-03-19  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../sys/unix/hints/linux-lisp: Remove `LISP_VERSION'
++	compilation flag.
++	* ../../include/patchlevel.h: Define `LISP_VERSION'.  (Currently
++	0.11.0.  I'm not sure about the current versioning system.  Will
++	we have to recompile every time the lisp code updates?)
++
++2021-03-18  Benjamin Yang  <be11ng@protonmail.com>
++
++	Make the C half tell which version of lisp it was compiled with.
++
++	* ../../util/makedefs.c: Make lisp-patch and `LISP_VERSION' part
++	of the version string.
++	* ../../sys/unix/hints/linux-lisp: Pass `LISP_VERSION' as a
++	compilation flag.  Note that ccache doesn't handle this well.
++
++2021-02-17  Benjamin Yang  <be11ng@protonmail.com>
++
++	Use own lisp_status_update rather than genl_status_update.
++	The Lisp half has been accordingly updated to use these functions,
++	as well as to start updating the alist `nh-status-attributes'.
++
++	* ../../include/winlisp.h (lisp_status_update): New FDECL.
++	* winlisp.c: Write new lisp_status_update
++	(status_fieldnm, status_vals): New extern variables.
++	(generate_status_line): Remove function.
++	(lisp_procs): Replace `genl_status_update' with
++	`lisp_status_update'.
++	(lisp_status_update): New function, which call the lisp commands
++	`status-condition-update', `print-status', and  `status-update'.
++	(lisp_putstr): Move status and condition functionality to
++	`lisp_status_update'.
++
++2021-01-23  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../sys/unix/hints/linux-lisp: Use CFLAGS DSCORE_ON_BOTL and
++	DEXP_ON_BOTL.
++
++2021-01-22  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (attr_to_string): Handle ATR_DIM and fail quietly by
++	returning “atr-none” instead of exiting.
++
++2020-07-06  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../sys/unix/hints/linux-lisp: Format file.
++
++	* winlisp.c (cmd_index): Fix format; add `#' for extended
++	commands.
++	(lisp_get_ext_cmd): Return `cmd', not `extended_cmd_id'; use
++	`read_int' rather than `scanf'; use `nhapi-get-ext-cmd' rather
++	than `nethack-api-get-ext-cmd'.
++
++2020-07-04  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (lisp_get_ext_cmd): Restore function.
++
++2020-06-22  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../sys/unix/hints/linux-lisp: Take $PREFIX as an input from
++	the environment.
++
++2020-06-09  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (lisp_putstr): Use lisp_cmd message-nohistory when the
++	ATR_NOHISTORY bitmask is set.
++
++2020-06-08  Benjamin Yang  <be11ng@protonmail.com>
++
++	* winlisp.c (attr_to_string): Strip off control flags masked onto
++	the display attributes.
++
++2020-05-26  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../sys/unix/hints/linux-lisp: New file.
++	* ../../sys/unix/Makefile.src (WINSRC): Remove redundant
++	definition.
++	(WINOBJ): Likewise.
++	(WINLIB): Likewise.
++	(WINLISPLIB): Add -lncurses and -ltinfo.
++
++2020-05-25  Benjamin Yang  <be11ng@protonmail.com>
++
++	* ../../include/winlisp.h (lisp_print_glyph): Add parameter int
++	bkglyph.
++	* winlisp.c (lisp_print_glyph): Likewise, and cast mapglyph to
++	\(void).
++	(lisp_player_selection): Pass FALSE argument to both randrole().
++	(generate_status_line): Replace u.ugold with money_cnt(invent).
++	(lisp_outrip): Likewise.
++	(bail): Replace terminate with nh_terminate.
++	(get_options): Comment out iflags.DECgraphics and
++	iflags.IBMgraphics.
++	(lisp_procs): Use the one from curses as a template, using genl
++	for missing functions.
++
++2005-02-27    <katia_dilkina@verizon.net>
++
++	* winlisp.c (CMD_LISP): new define
++	(cmd_index): new "travel" command, new "options" command.
++	(lisp_coord): new macro
++	(lisp_boolean): likewise
++	(read_int): flush stdout.
++	(read_string): likewise
++	(get_options): new function
++	(lisp_nhgetch): hande CMD_LISP commands
++	(lisp_nhgetch): call impossible if the command is not a CMD_KEY or
++	CMD_EXT type.
++	(lisp_display_nhwindow): read a dummy string, not a menu string.
++
++2004-02-09  Shawn Betts  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_yn_function): catch the chat prompt too.
++
++2003-09-19  Shawn Betts  <sabetts@vcn.bc.ca>
++
++	* winlisp.c: add extra element to lisp_procs (structure change in
++	3.4.2).
++
++2003-06-03  Shawn Betts  <sabetts@sfu.ca>
++
++	* winlisp.c (lisp_print_glyph): Pass special to the print-glyph
++	lisp function as a symbol. delete the MG_PET bit in special if
++	iflags.hilite_pet is not set.
++	(special_glyph_to_string): new function
++
++2003-05-14  Shawn Betts  <sabetts@sfu.ca>
++
++	* winlisp.c (lisp_string): Also escape the backslash character.
++
++2002-09-19  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_cmd): nethack-api-* renamed to nhapi-*.
++
++2002-09-16  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* ../tty/termcap.c (has_color): Add condition for LISP_GRAPHICS
++	which returns TRUE.
++
++2002-09-12  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_display_nhwindow): Add call to
++	`nethack-api-end'.
++
++	* ../../include/config.h: Default to LISP_GRAPHICS.
++
++	* ../../sys/unix/Makefile.src (WINSRC,WINOBJ,WINLIB): Set to
++	WINLISP* values.
++	(depend): Add winlisp.o dependancies.
++
++	* winlisp.c (lisp_curs): Don't send winid.  Add error check.
++	(lisp_putstr): Call `nethack-api-message' or
++	`nethack-api-menu-putstr' when appropriate.
++	(lisp_nhgetch): Update error message call.
++	(lisp_create_nhwindow): Don't send winids when creating message,
++	map, or status windows.
++	(lisp_clear_nhwindow): Call clear-message or clear-map instead of
++	clear-nhwindow.
++	(lisp_display_nhwindow): Call display-menu instead of
++	display-nhwindow.  Call block when handling case of blocking on
++	displaying the map window.
++	(lisp_destroy_nhwindow): Use WIN_* values instead of hardcoded
++	numbers.
++	(lisp_print_glyph): Don't send winid.  Add error check for bad
++	winids.
++	(lisp_outrip): Change reference to Enethack to nethack-el.
++
++2002-04-23  Shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_player_selection): Update to use new 3.4.0
++	functionality.
++	(lisp_print_glyph): likewise
++
++2002-02-16  Shawn Betts  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (read_string): take a pointer to a string as the
++	second argument. All callers updated. Rewritten to dynamically
++	resize the string in order to read an entire line.
++	(read_command): free the string returned from read_string
++	(lisp_askname): likewise
++	(lisp_display_nhwindow): likewise
++	(lisp_delay_output): likewise
++	(lisp_yn_function): likewise
++
++2002-02-14  Shawn Betts  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_print_glyph): Handle warning glyphs.
++
++2002-01-27  Ryan C Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (generate_status_line): Send flag values
++	individually.  Always send values for all attributes.
++
++2002-01-21  Ryan C Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_add_menu): Add tile argument.
++
++2002-01-22  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_player_selection): use the existing menu system
++	to select a player.
++	(lisp_menu_item_t): add a new member, accelerator.
++	(lisp_current_accelerator): new static global.
++	(lisp_add_menu): pick our own selector when ch is 0.
++	(lisp_start_menu): reset lisp_current_accelerator to 'a'.
++	(lisp_add_menu): remove the identifier argument to the lisp_cmd
++	"add_menu".
++	(lisp_get_menu_identifier): first argument is now a char.
++
++2002-01-20  Ryan C Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (cmd_index): Add remaining functions.
++
++2002-01-16  Ryan C Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_exit_nhwindows): Don't wait for a dummy return
++	value.
++	(lisp_destroy_nhwindow): Don't destroy the status, message or map
++	windows.
++
++2002-01-15  Ryan C Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_exit_nhwindows): Don't wait for a dummy return
++	value.
++
++2002-01-10  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (win_lisp_init): new function
++
++2002-01-09  Ryan C Yeske  <rcyeske@sfu.ca>
++
++	* winlisp.c (cmd_index): Add redraw command.
++	(C): New macro.
++
++2002-01-01  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (winid_list): new static global
++	(winid_list_len): likewise
++	(winid_list_max): likewise
++	(find_empty_cell): new function
++	(winid_is_taken): likewise
++	(add_winid): likewise
++	(get_unique_winid): likewise
++	(return_winid): likewise
++	(init_winid_list): likewise
++
++2001-12-20  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (read_command): return the command count as a string.
++	(num_digits): remove function
++	(power_of_ten): likewise
++	(lisp_nhgetch): command count works.
++	(enc_stat): extern reference
++	(hunger_stat): new constant
++	(generate_status_line): new function
++	(lisp_putstr): use generate_status_line to create the status line
++	call.
++
++2001-12-19  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c: add extern declaration for glyph2tile and
++	total_tiles_used.
++	(lisp_print_glyph): pass the glyph's graphics tile index as an
++	argument.
++
++2001-12-02  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_cmd, lisp_list, lisp_t, lisp_nil, lisp_literal)
++	(lisp_cons, lisp_int, lisp_string): Update macros.  Update all api
++	functions to use these macros.
++	(read_int, read_string, read_command): New functions.  Update all
++	api functions to use these functions.
++	(lisp_create_nhwindow): Send specific window creation commands.
++	(lisp_cliparound): Comment out body.
++
++2001-10-23  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_nhgetch): Don't silently loop on invalid
++	commands, send back a warning.
++	(lisp_yn_function): Make sure special handling is done for all
++	direction questions.  Include prompt in call to
++	nethack-api-ask-direction.  Include up, down and self directions.
++	If no default is set for a direction question, return space.
++
++2001-10-19  shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_init_nhwindows): turn on showexp and time flags.
++
++2001-10-17  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_display_nhwindow): Wait for a string if we are
++	blocking.
++
++2001-07-19  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c (lisp_player_selection): terminate if we read a -1 as
++	a selection.
++
++2001-07-16  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_delay_output): expect a return value from the
++	client.
++
++2001-07-14  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_add_menu): Quote the attribute.
++	(lisp_outrip): Add a newline to output.
++
++2001-07-06  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c (num_digits): new function
++	(power_of_ten): likewise
++	(lisp_nhgetch): handles repeated commands.
++
++2001-07-05  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c (WINLISP_VOID_RETVAL): flushes stdout
++
++2001-07-04  Ryan Yeske  <rcyeske@van.gobasis.com>
++
++	* winlisp.c (lisp_add_menu): Convert printf to lisp_* macros,
++	fixing a string quote bug.
++
++2001-06-28  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c (zap_color): new define
++	(cmap_color): likewise
++	(obj_color): likewise
++	(mon_color): likewise
++	(invis_color): likewise
++	(pet_color): likewise
++	(lisp_print_glyph): export the color. export the ascii character
++	as a number.
++
++2001-06-27  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c: fix a typo cmd_index
++	(lisp_yn_function): pass characters as numbers instead of ascii
++	characters. specially handle the "In what direction?" question.
++	(lisp_outrip): prints a properly formed lisp expression.
++
++2001-06-21  Shawn Betts  <sabetts@van.gobasis.com>
++
++	* winlisp.c (lisp_add_menu): items that are not selectable are
++	sent with an identifier of -1.
++	(lisp_select_menu): handle failed memory
++	allocation.
++
++2001-05-06  shawn  <sabetts@diggin.lamenet.tmp>
++
++	* winlisp.c (LINESIZ): new define
++	(lisp_menu_item_t): new struct
++	(lisp_menu_item_list): new static global
++	(lisp_menu_list_size): likewise
++	(lisp_menu_list_num): likewise
++	(cmd_index): fixed ddrop entry
++	(read_int): new function
++	(lisp_player_selection): use read_int
++	(lisp_askname): read the entire line to a string and parse data
++	from it.
++	(lisp_nhgetch): likewise
++	(lisp_create_nhwindow): likewise
++	(lisp_getlin): likewise
++	(lisp_yn_function): likewise
++	(lisp_start_menu): set lisp_menu_list_num to 0
++	(lisp_add_menu): add an entry to lisp_menu_item_list
++	(lisp_add_menu): pass the item's ID to the client instead of the
++	actual identifier.
++	(lisp_get_menu_identifier): new function
++	(lisp_select_menu): parse the list of selected menu items
++	(lisp_print_glyph): escape backslashes in output
++
++2000-10-01  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (cmd_index): renamed "ddoremarm" to "remarm" and
++	"ddoinv" to "inv".
++
++2000-09-25  Shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c: Added more key commands.
++	(lisp_player_selection): honours default player selections as
++	specified in the nethackrc file.
++
++2000-09-22  Shawn  <sabetts@vcn.bc.ca>
++
++	* winlisp.c (lisp_nhgetch): changed while loop stop condition.
++
++2000-09-19  Ryan yeske  <rcyeske@van.gobasis.com>
++
++	* winlisp.c (lisp_nh_getch): renamed from lisp_nh_getcmd() since
++	this is really called by the core when nethack wants a key.
++	(cmd_index): added gowest, gosouth, gonorth, goeast.
++
++2000-09-12  shawn  <sabetts@gobasis.com>
++
++	* winlisp.c (lisp_nh_poskey): Added code to read in an x,y,mod
++	combination instead of calling lisp_nhgetcmd. Currently commented
++	out until the lisp side catches up.  added cmd_index structure to
++	translate incoming command strings to extended commands or
++	keystrokes. Changed lisp_nhgetch to lisp_nhgetcmd and changed the
++	lisp command it calls to 'nethack-get-command'.
++
++2000-09-11  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_cmd, lisp_close_cmd, lisp_open, lisp_close,
++	lisp_quote, lisp_int, lisp_string, lisp_dot): created macros.
++
++2000-09-10  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_outrip): added closing paren.
++
++2000-08-21  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_nhgetch): change ch type to int from char.
++
++2000-08-20  Ryan Yeske  <rcyeske@vcn.bc.ca>
++
++	* winlisp.c (lisp_player_selection): role/race/gender/alignment
++	selection now sends (nethack-apix-choose-X ALIST) instead of
++	simply an alist.
++	(lisp_update_inventory):
++	s/nethack-api-updated-inventory/nethack-api-update-inventory/
++	(WINLISP_VOID_RETVAL): added macro, called for every void
++	function.
+--- /dev/null	2025-08-24 10:32:36.147906000 -0500
++++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
+@@ -0,0 +1,1775 @@
++/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
++/* NetHack may be freely redistributed.  See license for details. */
++
++/*
++ * "Main" file for the lisp/emacs window-port.  This contains most of
++ * the interface routines.  Please see doc/window.doc for an
++ * description of the window interface.
++ */
++
++#ifdef MSDOS			/* from compiler */
++#define SHORT_FILENAMES
++#endif
++
++#include "hack.h"
++#include "winlisp.h"
++#include "func_tab.h"
++
++#include "dlb.h"
++#ifdef SHORT_FILENAMES
++#include "patchlev.h"
++#else
++#include "patchlevel.h"
++#endif
++
++/*
++ * The following data structures come from the genl_ routines in
++ * src/windows.c and as such are considered to be on the window-port
++ * "side" of things, rather than the NetHack-core "side" of things.
++ */
++
++extern const char *status_fieldnm[MAXBLSTATS];
++extern char *status_vals[MAXBLSTATS];
++
++#define CMD_KEY 0
++#define CMD_EXT 1
++#define CMD_LISP 2 /* These are commands specific to the lisp port */
++
++typedef struct
++{
++  anything identifier;
++  char accelerator;
++} lisp_menu_item_t;
++
++/* An iterator for assigning accelerator keys. */
++static char lisp_current_accelerator;
++
++/* Helper structures to map menu id's to nethack anything's */
++static lisp_menu_item_t lisp_menu_item_list[1000];
++static int lisp_menu_list_num;
++
++extern char *enc_stat[];
++const char *hunger_stat[] = {
++	"Satiated",
++	"",
++	"Hungry",
++	"Weak",
++	"Fainting",
++	"Fainted",
++	"Starved"
++};
++
++typedef struct
++{
++  const char *name;
++  int type;
++  int cmd;			/* The command (a keystroke) */
++} cmd_index_t;
++
++#ifndef C
++#define C(c)		(0x1f & (c))
++#endif
++
++/* Taken from cmd.c */
++cmd_index_t cmd_index[] =
++  {
++   {"gowest", CMD_KEY, 'h'},
++   {"gowestontop", CMD_KEY, 'H'},
++   {"gowestnear", CMD_KEY, C('h')},
++
++   {"gosouth", CMD_KEY, 'j'},
++   {"gosouthontop", CMD_KEY, 'J'},
++   {"gosouthnear", CMD_KEY,  C('j')},
++
++   {"gonorth", CMD_KEY, 'k'},
++   {"gonorthontop", CMD_KEY, 'K'},
++   {"gonorthnear", CMD_KEY, C('k')},
++
++   {"goeast", CMD_KEY, 'l'},
++   {"goeastontop", CMD_KEY, 'L'},
++   {"goeastnear", CMD_KEY, C('l')},
++
++   {"gonorthwest", CMD_KEY, 'y'},
++   {"gonorthwestontop", CMD_KEY, 'Y'},
++   {"gonorthwestnear", CMD_KEY, C('y')},
++
++   {"gonortheast", CMD_KEY, 'u'},
++   {"gonortheastontop", CMD_KEY, 'U'},
++   {"gonortheastnear", CMD_KEY, C('u')},
++
++   {"gosouthwest", CMD_KEY, 'b'},
++   {"gosouthwestontop", CMD_KEY, 'B'},
++   {"gosouthwestnear", CMD_KEY, C('b')},
++
++   {"gosoutheast", CMD_KEY, 'n'},
++   {"gosoutheastontop", CMD_KEY, 'N'},
++   {"gosoutheastnear", CMD_KEY, C('n')},
++
++   {"travel", CMD_KEY, '_'},
++
++   {"idtrap", CMD_KEY, '^'},
++   {"apply", CMD_KEY, 'a'},
++   {"remarm", CMD_KEY, 'A'},
++   {"close", CMD_KEY, 'c'},
++   {"drop", CMD_KEY, 'd'},
++
++   {"ddrop", CMD_KEY, 'D'},
++   {"eat", CMD_KEY, 'e'},
++   {"engrave", CMD_KEY, 'E'},
++   {"fire", CMD_KEY, 'f'},
++   {"inv", CMD_KEY, 'i'},
++
++   {"typeinv", CMD_KEY, 'I'},
++   {"open", CMD_KEY, 'o'},
++   {"set", CMD_KEY, 'O'},
++   {"pay", CMD_KEY, 'p'},
++   {"puton", CMD_KEY, 'P'},
++
++   {"drink", CMD_KEY, 'q'},
++   {"wieldquiver", CMD_KEY, 'Q'},
++   {"read", CMD_KEY, 'r'},
++   {"remring", CMD_KEY, 'R'},
++   {"search", CMD_KEY, 's'},
++
++   {"save", CMD_KEY, 'S'},
++   {"throw", CMD_KEY, 't'},
++   {"takeoff", CMD_KEY, 'T'},
++   {"simpleversion", CMD_KEY, 'v'},
++   {"history", CMD_KEY, 'V'},
++
++   {"wield", CMD_KEY, 'w'},
++   {"wear", CMD_KEY, 'W'},
++   {"swapweapon", CMD_KEY, 'x'},
++   {"enter_explore_mode", CMD_KEY, 'X'},
++   {"zap", CMD_KEY, 'z'},
++
++   {"cast", CMD_KEY, 'Z'},
++   {"up", CMD_KEY, '<'},
++   {"down", CMD_KEY, '>'},
++   {"whatis", CMD_KEY, '/'},
++   {"help", CMD_KEY, '?'},
++
++   {"whatdoes", CMD_KEY, '&'},
++   {"sh", CMD_KEY, '!'},
++   {"discovered", CMD_KEY, '\\'},
++   {"null", CMD_KEY, '.'},
++   {"look", CMD_KEY, ':'},
++
++   {"quickwhatis", CMD_KEY, ';'},
++   {"pickup", CMD_KEY, ','},
++   {"togglepickup", CMD_KEY, '@'},
++   {"prinuse", CMD_KEY, '*'},
++   {"countgold", CMD_KEY, '$'},
++
++   {"kick", CMD_KEY, C('d')},
++   {"listspells", CMD_KEY, '+'},
++   {"redraw", CMD_KEY, C('r')},
++   {"teleport", CMD_KEY, C('t')},
++   {"callmon", CMD_KEY, 'C'},
++   {"fight", CMD_KEY, 'F'},
++   {"movenear", CMD_KEY, 'g'},
++   {"move", CMD_KEY, 'G'},
++   {"movenopickuporfight", CMD_KEY, 'm'},
++   {"movenopickup", CMD_KEY, 'M'},
++   {"showweapon", CMD_KEY, ')'},
++   {"showarmor", CMD_KEY, '['},
++   {"showrings", CMD_KEY, '='},
++   {"showamulet", CMD_KEY, '"'},
++   {"showtool", CMD_KEY, '('},
++   {"attributes", CMD_KEY, C('x')},
++#ifdef REDO
++   {"again", CMD_KEY, DOAGAIN},
++#endif /* REDO */
++
++   /* wizard commands */
++   {"wiz_detect", CMD_KEY, C('e')},
++   {"wiz_map", CMD_KEY, C('f')},
++   {"wiz_genesis", CMD_KEY, C('g')},
++   {"wiz_identify", CMD_KEY, C('i')},
++   {"wiz_where", CMD_KEY, C('o')},
++   {"wiz_level_tele", CMD_KEY, C('v')},
++   {"wiz_wish", CMD_KEY, C('w')},
++
++   /* wizard extended commands */
++#ifdef WIZARD
++   {"light sources", CMD_EXT, 0},
++   {"seenv", CMD_EXT, 0},
++   {"stats", CMD_EXT, 0},
++   {"timeout", CMD_EXT, 0},
++   {"vision", CMD_EXT, 0},
++#ifdef DEBUG
++   {"wizdebug", CMD_EXT, 0},
++#endif /* DEBUG */
++   {"wmode", CMD_EXT, 0},
++#endif /* WIZARD */
++   {"#", CMD_KEY, '#'},
++
++   {"pray", CMD_EXT, 0},
++   {"adjust", CMD_EXT, 0},
++   {"chat", CMD_EXT, 0},
++   {"conduct", CMD_EXT, 0},
++   {"dip", CMD_EXT, 0},
++
++   {"enhance", CMD_EXT, 0},
++   {"force", CMD_EXT, 0},
++   {"invoke", CMD_EXT, 0},
++   {"jump", CMD_EXT, 0},
++   {"loot", CMD_EXT, 0},
++
++   {"monster", CMD_EXT, 0},
++   {"name", CMD_EXT, 0},
++   {"offer", CMD_EXT, 0},
++   {"quit", CMD_EXT, 0},
++   {"ride", CMD_EXT, 0},
++
++   {"rub", CMD_EXT, 0},
++   {"sit", CMD_EXT, 0},
++   {"turn", CMD_EXT, 0},
++   {"twoweapon", CMD_EXT, 0},
++   {"untrap", CMD_EXT, 0},
++
++   {"version", CMD_EXT, 0},
++   {"wipe", CMD_EXT, 0},
++
++   /* Lisp port specific commands  */
++   {"options", CMD_LISP, 0},
++
++   {0, CMD_KEY, '\0'}
++  };
++
++/* This variable is set when the user has selected an extended command. */
++static int extended_cmd_id = 0;
++
++/* Interface definition, for windows.c */
++struct window_procs lisp_procs = {
++    WPID(lisp),
++    (WC_ALIGN_MESSAGE | WC_ALIGN_STATUS | WC_COLOR | WC_INVERSE
++      | WC_HILITE_PET | WC_WINDOWCOLORS
++      | WC_PERM_INVENT | WC_POPUP_DIALOG | WC_SPLASH_SCREEN),
++    (WC2_DARKGRAY | WC2_HITPOINTBAR
++#ifdef CURSES_UNICODE
++     | WC2_U_UTF8STR
++#endif
++     | WC2_EXTRACOLORS
++#ifdef SELECTSAVED
++     | WC2_SELECTSAVED
++#endif
++#if defined(STATUS_HILITES)
++     | WC2_HILITE_STATUS
++#endif
++     | WC2_FLUSH_STATUS | WC2_TERM_SIZE
++     | WC2_STATUSLINES | WC2_WINDOWBORDERS | WC2_PETATTR | WC2_GUICOLOR
++     | WC2_SUPPRESS_HIST | WC2_URGENT_MESG | WC2_MENU_SHIFT),
++    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},   /* color availability */
++    lisp_init_nhwindows,
++    lisp_player_selection,
++    lisp_askname,
++    lisp_get_nh_event,
++    lisp_exit_nhwindows,
++    lisp_suspend_nhwindows,
++    lisp_resume_nhwindows,
++    lisp_create_nhwindow,
++    lisp_clear_nhwindow,
++    lisp_display_nhwindow,
++    lisp_destroy_nhwindow,
++    lisp_curs,
++    lisp_putstr,
++    genl_putmixed,
++    lisp_display_file,
++    lisp_start_menu,
++    lisp_add_menu,
++    lisp_end_menu,
++    lisp_select_menu,
++    genl_message_menu,
++    lisp_mark_synch,
++    lisp_wait_synch,
++#ifdef CLIPPING
++    lisp_cliparound,
++#endif
++#ifdef POSITIONBAR
++    dummy_update_position_bar,
++#endif
++    lisp_print_glyph,
++    lisp_raw_print,
++    lisp_raw_print_bold,
++    lisp_nhgetch,
++    lisp_nh_poskey,
++    lisp_nhbell,
++    lisp_doprev_message,
++    lisp_yn_function,
++    lisp_getlin,
++    lisp_get_ext_cmd,
++    lisp_number_pad,
++    lisp_delay_output,
++#ifdef CHANGE_COLOR
++    dummy_change_color,
++#ifdef MAC /* old OS 9, not OSX */
++    (void (*)(int)) 0,
++    (short (*)(winid, char *)) 0,
++#endif
++    dummy_get_color_string,
++#endif
++    genl_outrip,
++    genl_preference_update,
++    genl_getmsghistory,
++    genl_putmsghistory,
++    genl_status_init,
++    genl_status_finish,
++    genl_status_enablefield,
++    lisp_status_update,
++    genl_can_suspend_yes,
++    lisp_update_inventory,
++    lisp_ctrl_nhwindow,
++};
++
++/* macros for printing lisp output */
++#define lisp_cmd(s,body)			\
++  do						\
++    {						\
++      printf("(nhapi-%s ",s);		\
++      body;					\
++      printf(")\n");				\
++    }						\
++  while (0)
++/* #define lisp_cmd0(s) printf ("(nhapi-%s)\n", s) */
++#define lisp_list(body)				\
++  do						\
++    {						\
++      printf("(");				\
++      body; 					\
++      printf(") ");				\
++    }						\
++  while (0)
++
++#define lisp_open printf("(")
++#define lisp_close printf(") ")
++#define lisp_quote printf("'")
++#define lisp_dot printf(". ")
++#define lisp_t printf("t ")
++#define lisp_nil printf("nil ")
++#define lisp_literal(x)				\
++  do						\
++    {						\
++      lisp_quote;				\
++      printf ("%s ", x);			\
++    }						\
++  while (0)
++#define lisp_cons(x,y)				\
++  do						\
++    {						\
++      lisp_open;				\
++      x;					\
++      lisp_dot;					\
++      y;					\
++      lisp_close;				\
++    }						\
++  while (0)
++#define lisp_int(i) printf("%d ",i)
++#define lisp_coord(c) printf("'(%d,%d) ",c.x,c.y)
++#define lisp_boolean(i) printf("%s ",i?"t":"nil")
++#define lisp_string(s)					\
++  do							\
++     {							\
++       unsigned long nhi;						\
++       printf ("\"");					\
++       if (s)						\
++	 for (nhi=0;nhi<strlen(s);nhi++)		\
++	   {						\
++	     if (s[nhi] == 34 				\
++		 || s[nhi] == 92) putchar('\\');	\
++	     putchar(s[nhi]);				\
++	   }						\
++       printf("\" ");					\
++     }							\
++  while (0)
++
++static const char*
++attr_to_string(int attr)
++{
++  /* Just like curses, we strip off control flags masked onto the display
++     attributes (caller should have already done this...) */
++  attr &= ~(ATR_URGENT | ATR_NOHISTORY);
++
++  switch (attr) {
++    case ATR_NONE:
++      return "nethack-atr-none-face";
++    case ATR_ULINE:
++      return "nethack-atr-uline-face";
++    case ATR_BOLD:
++      return "nethack-atr-bold-face";
++    case ATR_DIM:
++      return "nethack-atr-dim-face";
++    case ATR_BLINK:
++      return "nethack-atr-blink-face";
++    case ATR_INVERSE:
++      return "nethack-atr-inverse-face";
++    default:
++      return "nethack-atr-none-face";
++  }
++}
++
++static const char*
++special_glyph_to_string(unsigned special)
++{
++  switch (special)
++    {
++    case MG_CORPSE:
++      return "corpse";
++    case MG_INVIS:
++      return "invis";
++    case MG_DETECT:
++      return "detect";
++    case MG_PET:
++      return "pet";
++    case MG_RIDDEN:
++      return "ridden";
++    }
++
++  /* If it's a combination, just return special. */
++  if (special)
++    return "special";
++  else
++    return "none";
++}
++
++static const char*
++wintype_to_string(int type)
++{
++  switch (type)
++    {
++    case NHW_MAP:
++      return "nhw-map";
++    case NHW_MESSAGE:
++      return "nhw-message";
++    case NHW_STATUS:
++      return "nhw-status";
++    case NHW_MENU:
++      return "nhw-menu";
++    case NHW_TEXT:
++      return "nhw-text";
++    default:
++      fprintf (stderr, "Invalid window code\n");
++      exit (EXIT_FAILURE);
++      break;
++    }
++}
++
++static const char*
++how_to_string (int how)
++{
++  switch (how)
++    {
++    case PICK_NONE:
++      return "pick-none";
++    case PICK_ONE:
++      return "pick-one";
++    case PICK_ANY:
++      return "pick-any";
++    default:
++      impossible ("Invalid how value %d", how);
++      return NULL;
++    }
++}
++
++static int
++read_int (const char* prompt, int *i)
++{
++  char line[BUFSZ];
++  int rv;
++  printf ("%s> ", prompt);
++  fflush(stdout);
++  fgets (line, BUFSZ, stdin);
++  rv = sscanf (line, "%d", i);
++  if (rv != 1) *i = -1;
++  return rv;
++}
++
++static int
++read_string (const char *prompt, char **str)
++{
++  char* rv;
++  int len;
++  int size;
++  char tmp[BUFSZ];
++
++  len = 0;
++  size = BUFSZ * 2;
++  *str = malloc (size);
++  (*str)[0] = '\0';
++
++  printf ("%s> ", prompt);
++  fflush(stdout);
++  do
++    {
++      /* Read the string */
++      rv = fgets (tmp, BUFSZ, stdin);
++      if (rv == NULL)
++	break;
++
++      len += strlen (tmp);
++      if (len >= size - 1)
++	{
++	  size *= 2;
++	  *str = realloc (*str, size);
++	  if (*str == NULL)
++	    panic ("Memory allocation failure; cannot get %u bytes", size);
++	}
++      strcat (*str, tmp);
++    } while (tmp[strlen (tmp) - 1] != '\n');
++
++  /* Did we read a string or error out? */
++  if (rv == NULL)
++    {
++      free (*str);
++      return -1;
++    }
++  else
++    {
++      /* chop the newline */
++      (*str) [strlen (*str) - 1] = '\0';
++      return 0;
++    }
++}
++
++
++static int
++read_command (const char *prompt, char *cmd, char *count)
++{
++  char *buf;
++  int rv;
++  cmd[0] = '\0';
++  *count = 0;
++  if (read_string (prompt, &buf) == -1)
++    return -1;
++  rv = sscanf (buf, "%s %s", cmd, count);
++  free (buf);
++  if (rv != 2) *count = 0;
++  return rv;
++}
++
++static void
++bail(const char *mesg)
++{
++  clearlocks ();
++  lisp_exit_nhwindows (mesg);
++  nh_terminate (EXIT_SUCCESS);
++  /*NOTREACHED*/
++}
++
++void
++win_lisp_init(int dir UNUSED)
++{
++  /* Code to be executed on startup. */
++  return;
++}
++
++void
++lisp_player_selection(void)
++{
++	int i, k, n;
++	char pick4u = 'n', thisch, lastch = 0;
++	char pbuf[QBUFSZ], plbuf[QBUFSZ];
++	winid win;
++	anything any;
++	menu_item *selected = 0;
++
++	/* prevent an unnecessary prompt */
++	rigid_role_checks();
++
++	/* Should we randomly pick for the player? */
++	if (!flags.randomall &&
++	    (flags.initrole == ROLE_NONE || flags.initrace == ROLE_NONE ||
++	     flags.initgend == ROLE_NONE || flags.initalign == ROLE_NONE)) {
++
++	  pick4u = lisp_yn_function ("Shall I pick a character for you? [ynq] ", "ynq", 'y');
++
++	  if (pick4u != 'y' && pick4u != 'n')
++	    {
++	    give_up:	/* Quit */
++	      if (selected) free((genericptr_t) selected);
++	      bail((char *)0);
++	      /*NOTREACHED*/
++	      return;
++	    }
++
++	}
++
++	(void)  root_plselection_prompt(plbuf, QBUFSZ - 1,
++			flags.initrole, flags.initrace, flags.initgend, flags.initalign);
++
++	/* Select a role, if necessary */
++	/* we'll try to be compatible with pre-selected race/gender/alignment,
++	 * but may not succeed */
++	if (flags.initrole < 0) {
++	    char rolenamebuf[QBUFSZ];
++	    /* Process the choice */
++	    if (pick4u == 'y' || flags.initrole == ROLE_RANDOM || flags.randomall) {
++		/* Pick a random role */
++		flags.initrole = pick_role(flags.initrace, flags.initgend,
++						flags.initalign, PICK_RANDOM);
++		if (flags.initrole < 0) {
++/* 		    lisp_putstr(BASE_WINDOW, 0, "Incompatible role!"); */
++		    flags.initrole = randrole(FALSE);
++		}
++	    } else {
++		/* Prompt for a role */
++		win = create_nhwindow(NHW_MENU);
++		start_menu(win, MENU_BEHAVE_STANDARD);
++		any.a_void = 0;         /* zero out all bits */
++		for (i = 0; roles[i].name.m; i++) {
++		    if (ok_role(i, flags.initrace, flags.initgend,
++							flags.initalign)) {
++			any.a_int = i+1;	/* must be non-zero */
++			thisch = lowc(roles[i].name.m[0]);
++			if (thisch == lastch) thisch = highc(thisch);
++			if (flags.initgend != ROLE_NONE && flags.initgend != ROLE_RANDOM) {
++				if (flags.initgend == 1  && roles[i].name.f)
++					Strcpy(rolenamebuf, roles[i].name.f);
++				else
++					Strcpy(rolenamebuf, roles[i].name.m);
++			} else {
++				if (roles[i].name.f) {
++					Strcpy(rolenamebuf, roles[i].name.m);
++					Strcat(rolenamebuf, "/");
++					Strcat(rolenamebuf, roles[i].name.f);
++				} else
++					Strcpy(rolenamebuf, roles[i].name.m);
++			}
++			add_menu(win, &nul_glyphinfo, &any, thisch,
++			         0, ATR_NONE, NO_COLOR, an(rolenamebuf), MENU_ITEMFLAGS_NONE);
++			lastch = thisch;
++		    }
++		}
++		any.a_int = pick_role(flags.initrace, flags.initgend,
++				    flags.initalign, PICK_RANDOM)+1;
++		if (any.a_int == 0)	/* must be non-zero */
++		    any.a_int = randrole(FALSE)+1;
++		add_menu(win, &nul_glyphinfo, &any , '*', 0, ATR_NONE, NO_COLOR,
++				"Random", MENU_ITEMFLAGS_NONE);
++		any.a_int = i+1;	/* must be non-zero */
++		add_menu(win, &nul_glyphinfo, &any , 'q', 0, ATR_NONE, NO_COLOR,
++				"Quit", MENU_ITEMFLAGS_NONE);
++		Sprintf(pbuf, "Pick a role for your %s", plbuf);
++		end_menu(win, pbuf);
++		n = select_menu(win, PICK_ONE, &selected);
++		destroy_nhwindow(win);
++
++		/* Process the choice */
++		if (n != 1 || selected[0].item.a_int == any.a_int)
++		    goto give_up;		/* Selected quit */
++
++		flags.initrole = selected[0].item.a_int - 1;
++		free((genericptr_t) selected),	selected = 0;
++	    }
++	    (void)  root_plselection_prompt(plbuf, QBUFSZ - 1,
++			flags.initrole, flags.initrace, flags.initgend, flags.initalign);
++	}
++
++	/* Select a race, if necessary */
++	/* force compatibility with role, try for compatibility with
++	 * pre-selected gender/alignment */
++	if (flags.initrace < 0 || !validrace(flags.initrole, flags.initrace)) {
++	    /* pre-selected race not valid */
++	    if (pick4u == 'y' || flags.initrace == ROLE_RANDOM || flags.randomall) {
++		flags.initrace = pick_race(flags.initrole, flags.initgend,
++							flags.initalign, PICK_RANDOM);
++		if (flags.initrace < 0) {
++/* 		    lisp_putstr(BASE_WINDOW, 0, "Incompatible race!"); */
++		    flags.initrace = randrace(flags.initrole);
++		}
++	    } else {	/* pick4u == 'n' */
++		/* Count the number of valid races */
++		n = 0;	/* number valid */
++		k = 0;	/* valid race */
++		for (i = 0; races[i].noun; i++) {
++		    if (ok_race(flags.initrole, i, flags.initgend,
++							flags.initalign)) {
++			n++;
++			k = i;
++		    }
++		}
++		if (n == 0) {
++		    for (i = 0; races[i].noun; i++) {
++			if (validrace(flags.initrole, i)) {
++			    n++;
++			    k = i;
++			}
++		    }
++		}
++
++		/* Permit the user to pick, if there is more than one */
++		if (n > 1) {
++		    win = create_nhwindow(NHW_MENU);
++		    start_menu(win, MENU_BEHAVE_STANDARD);
++		    any.a_void = 0;         /* zero out all bits */
++		    for (i = 0; races[i].noun; i++)
++			if (ok_race(flags.initrole, i, flags.initgend,
++							flags.initalign)) {
++			    any.a_int = i+1;	/* must be non-zero */
++			    add_menu(win, &nul_glyphinfo, &any, races[i].noun[0],
++				0, ATR_NONE, NO_COLOR, races[i].noun, MENU_ITEMFLAGS_NONE);
++			}
++		    any.a_int = pick_race(flags.initrole, flags.initgend,
++					flags.initalign, PICK_RANDOM)+1;
++		    if (any.a_int == 0)	/* must be non-zero */
++			any.a_int = randrace(flags.initrole)+1;
++		    add_menu(win, &nul_glyphinfo, &any , '*', 0, ATR_NONE, NO_COLOR,
++				    "Random", MENU_ITEMFLAGS_NONE);
++		    any.a_int = i+1;	/* must be non-zero */
++		    add_menu(win, &nul_glyphinfo, &any , 'q', 0, ATR_NONE, NO_COLOR,
++				    "Quit", MENU_ITEMFLAGS_NONE);
++		    Sprintf(pbuf, "Pick the race of your %s", plbuf);
++		    end_menu(win, pbuf);
++		    n = select_menu(win, PICK_ONE, &selected);
++		    destroy_nhwindow(win);
++		    if (n != 1 || selected[0].item.a_int == any.a_int)
++			goto give_up;		/* Selected quit */
++
++		    k = selected[0].item.a_int - 1;
++		    free((genericptr_t) selected),	selected = 0;
++		}
++		flags.initrace = k;
++	    }
++	    (void)  root_plselection_prompt(plbuf, QBUFSZ - 1,
++			flags.initrole, flags.initrace, flags.initgend, flags.initalign);
++	}
++
++	/* Select a gender, if necessary */
++	/* force compatibility with role/race, try for compatibility with
++	 * pre-selected alignment */
++	if (flags.initgend < 0 || !validgend(flags.initrole, flags.initrace,
++						flags.initgend)) {
++	    /* pre-selected gender not valid */
++	    if (pick4u == 'y' || flags.initgend == ROLE_RANDOM || flags.randomall) {
++		flags.initgend = pick_gend(flags.initrole, flags.initrace,
++						flags.initalign, PICK_RANDOM);
++		if (flags.initgend < 0) {
++/* 		    lisp_putstr(BASE_WINDOW, 0, "Incompatible gender!"); */
++		    flags.initgend = randgend(flags.initrole, flags.initrace);
++		}
++	    } else {	/* pick4u == 'n' */
++		/* Count the number of valid genders */
++		n = 0;	/* number valid */
++		k = 0;	/* valid gender */
++		for (i = 0; i < ROLE_GENDERS; i++) {
++		    if (ok_gend(flags.initrole, flags.initrace, i,
++							flags.initalign)) {
++			n++;
++			k = i;
++		    }
++		}
++		if (n == 0) {
++		    for (i = 0; i < ROLE_GENDERS; i++) {
++			if (validgend(flags.initrole, flags.initrace, i)) {
++			    n++;
++			    k = i;
++			}
++		    }
++		}
++
++		/* Permit the user to pick, if there is more than one */
++		if (n > 1) {
++		    win = create_nhwindow(NHW_MENU);
++		    start_menu(win, MENU_BEHAVE_STANDARD);
++		    any.a_void = 0;         /* zero out all bits */
++		    for (i = 0; i < ROLE_GENDERS; i++)
++			if (ok_gend(flags.initrole, flags.initrace, i,
++							    flags.initalign)) {
++			    any.a_int = i+1;
++			    add_menu(win, &nul_glyphinfo, &any, genders[i].adj[0],
++				0, ATR_NONE, NO_COLOR, genders[i].adj, MENU_ITEMFLAGS_NONE);
++			}
++		    any.a_int = pick_gend(flags.initrole, flags.initrace,
++					    flags.initalign, PICK_RANDOM)+1;
++		    if (any.a_int == 0)	/* must be non-zero */
++			any.a_int = randgend(flags.initrole, flags.initrace)+1;
++		    add_menu(win, &nul_glyphinfo, &any , '*', 0, ATR_NONE, NO_COLOR,
++				    "Random", MENU_ITEMFLAGS_NONE);
++		    any.a_int = i+1;	/* must be non-zero */
++		    add_menu(win, &nul_glyphinfo, &any , 'q', 0, ATR_NONE, NO_COLOR,
++				    "Quit", MENU_ITEMFLAGS_NONE);
++		    Sprintf(pbuf, "Pick the gender of your %s", plbuf);
++		    end_menu(win, pbuf);
++		    n = select_menu(win, PICK_ONE, &selected);
++		    destroy_nhwindow(win);
++		    if (n != 1 || selected[0].item.a_int == any.a_int)
++			goto give_up;		/* Selected quit */
++
++		    k = selected[0].item.a_int - 1;
++		    free((genericptr_t) selected),	selected = 0;
++		}
++		flags.initgend = k;
++	    }
++	    (void)  root_plselection_prompt(plbuf, QBUFSZ - 1,
++			flags.initrole, flags.initrace, flags.initgend, flags.initalign);
++	}
++
++	/* Select an alignment, if necessary */
++	/* force compatibility with role/race/gender */
++	if (flags.initalign < 0 || !validalign(flags.initrole, flags.initrace,
++							flags.initalign)) {
++	    /* pre-selected alignment not valid */
++	    if (pick4u == 'y' || flags.initalign == ROLE_RANDOM || flags.randomall) {
++		flags.initalign = pick_align(flags.initrole, flags.initrace,
++							flags.initgend, PICK_RANDOM);
++		if (flags.initalign < 0) {
++/* 		    lisp_putstr(BASE_WINDOW, 0, "Incompatible alignment!"); */
++		    flags.initalign = randalign(flags.initrole, flags.initrace);
++		}
++	    } else {	/* pick4u == 'n' */
++		/* Count the number of valid alignments */
++		n = 0;	/* number valid */
++		k = 0;	/* valid alignment */
++		for (i = 0; i < ROLE_ALIGNS; i++) {
++		    if (ok_align(flags.initrole, flags.initrace, flags.initgend,
++							i)) {
++			n++;
++			k = i;
++		    }
++		}
++		if (n == 0) {
++		    for (i = 0; i < ROLE_ALIGNS; i++) {
++			if (validalign(flags.initrole, flags.initrace, i)) {
++			    n++;
++			    k = i;
++			}
++		    }
++		}
++
++		/* Permit the user to pick, if there is more than one */
++		if (n > 1) {
++		    win = create_nhwindow(NHW_MENU);
++		    start_menu(win, MENU_BEHAVE_STANDARD);
++		    any.a_void = 0;         /* zero out all bits */
++		    for (i = 0; i < ROLE_ALIGNS; i++)
++			if (ok_align(flags.initrole, flags.initrace,
++							flags.initgend, i)) {
++			    any.a_int = i+1;
++			    add_menu(win, &nul_glyphinfo, &any, aligns[i].adj[0],
++				 0, ATR_NONE, NO_COLOR, aligns[i].adj, MENU_ITEMFLAGS_NONE);
++			}
++		    any.a_int = pick_align(flags.initrole, flags.initrace,
++					    flags.initgend, PICK_RANDOM)+1;
++		    if (any.a_int == 0)	/* must be non-zero */
++			any.a_int = randalign(flags.initrole, flags.initrace)+1;
++		    add_menu(win, &nul_glyphinfo, &any , '*', 0, ATR_NONE, NO_COLOR,
++				    "Random", MENU_ITEMFLAGS_NONE);
++		    any.a_int = i+1;	/* must be non-zero */
++		    add_menu(win, &nul_glyphinfo, &any , 'q', 0, ATR_NONE, NO_COLOR,
++				    "Quit", MENU_ITEMFLAGS_NONE);
++		    Sprintf(pbuf, "Pick the alignment of your %s", plbuf);
++		    end_menu(win, pbuf);
++		    n = select_menu(win, PICK_ONE, &selected);
++		    destroy_nhwindow(win);
++		    if (n != 1 || selected[0].item.a_int == any.a_int)
++			goto give_up;		/* Selected quit */
++
++		    k = selected[0].item.a_int - 1;
++		    free((genericptr_t) selected),	selected = 0;
++		}
++		flags.initalign = k;
++	    }
++	}
++	/* Success! */
++/* 	lisp_display_nhwindow(BASE_WINDOW, FALSE); */
++}
++
++/* Reads from standard in, the player's name. */
++void
++lisp_askname(void)
++{
++  char *line;
++  lisp_cmd ("askname",);
++  read_string ("string", &line);
++  strncpy (svp.plname, line, PL_NSIZ);
++  svp.plname[PL_NSIZ-1] = '\0';
++  free (line);
++}
++
++/* This is a noop for tty and X, so should it be a noop for us too? */
++void
++lisp_get_nh_event(void)
++{
++/*   lisp_cmd ("get-event",); */
++}
++
++/* Global Functions */
++void
++lisp_raw_print(const char *str)
++{
++  lisp_cmd ("raw-print", lisp_string (str));
++}
++
++void
++lisp_raw_print_bold(const char *str)
++{
++  lisp_cmd ("raw-print-bold", lisp_string (str));
++}
++
++void
++lisp_curs(winid window, int x, int y)
++{
++  if (window == WIN_MAP)
++    lisp_cmd ("curs",
++	      lisp_int (x);
++	      lisp_int (y));
++  else if (window == WIN_STATUS)
++    {
++      /* do nothing */
++    }
++  else
++    lisp_cmd ("error", lisp_string("lisp_curs bad window"); lisp_int (window));
++}
++
++/* Send the options to the lisp process */
++static void
++get_options(void)
++{
++  lisp_cmd ("options",
++	    lisp_boolean(iflags.cbreak);	/* in cbreak mode, rogue format */
++	    // lisp_boolean(iflags.DECgraphics);	/* use DEC VT-xxx extended character set */
++	    lisp_boolean(iflags.echo);		/* 1 to echo characters */
++	    // lisp_boolean(iflags.IBMgraphics);	/* use IBM extended character set */
++	    lisp_int(iflags.msg_history);	/* hint: # of top lines to save */
++	    lisp_boolean(iflags.num_pad);	/* use numbers for movement commands */
++	    lisp_boolean(iflags.news);		/* print news */
++	    lisp_boolean(iflags.window_inited); /* true if init_nhwindows() completed */
++	    lisp_boolean(iflags.vision_inited); /* true if vision is ready */
++	    lisp_boolean(iflags.menu_tab_sep);	/* Use tabs to separate option menu fields */
++	    lisp_boolean(iflags.menu_requested); /* Flag for overloaded use of 'm' prefix
++						  * on some non-move commands */
++	    lisp_int(iflags.num_pad_mode);
++	    lisp_int(iflags.purge_monsters);	/* # of dead monsters still on fmon list */
++        // lisp_int(*iflags.opt_booldup);	/\* for duplication of boolean opts in config file *\/ */
++        // lisp_int(*iflags.opt_compdup);	/\* for duplication of compound opts in config file *\/ */
++	    lisp_int(iflags.bouldersym);	/* symbol for boulder display */
++	    lisp_coord(iflags.travelcc);	/* coordinates for travel_cache */
++#ifdef WIZARD
++	    lisp_boolean(iflags.sanity_check); /* run sanity checks */
++	    lisp_boolean(iflags.mon_polycontrol); /* debug: control monster polymorphs */
++#endif
++	    );
++}
++
++/* call once for each field, then call with BL_FLUSH to output the result */
++
++/* Note that a bunch of the configuration for colors doesn't live here, but
++   instead resides in the Lisp half.  This allows us to some Lisp-based
++   overrides of faces, as well as putting configuration in a custom-set variable
++   instead of .nethacrc. */
++
++void lisp_status_update(
++    int idx, genericptr_t ptr,
++    int chg UNUSED, int percent,
++    int color_and_attr UNUSED,
++    unsigned long *colormasks UNUSED)
++{
++    long cond, *condptr = (long *) ptr;
++    char *nb, *text = (char *) ptr;
++    if (idx != BL_FLUSH) {
++        if (idx < 0 || idx >= MAXBLSTATS)
++            return; /* Should be a panic of some kind, but not sure */
++        if (idx == BL_CONDITION) {
++            cond = condptr ? *condptr : 0L;
++            nb = status_vals[idx];
++            *nb = '\0';
++            if (cond & BL_MASK_STONE)
++                Strcpy(nb = eos(nb), " Stone");
++            if (cond & BL_MASK_SLIME)
++                Strcpy(nb = eos(nb), " Slime");
++            if (cond & BL_MASK_STRNGL)
++                Strcpy(nb = eos(nb), " Strngl");
++            if (cond & BL_MASK_FOODPOIS)
++                Strcpy(nb = eos(nb), " FoodPois");
++            if (cond & BL_MASK_TERMILL)
++                Strcpy(nb = eos(nb), " TermIll");
++            if (cond & BL_MASK_BLIND)
++                Strcpy(nb = eos(nb), " Blind");
++            if (cond & BL_MASK_DEAF)
++                Strcpy(nb = eos(nb), " Deaf");
++            if (cond & BL_MASK_STUN)
++                Strcpy(nb = eos(nb), " Stun");
++            if (cond & BL_MASK_CONF)
++                Strcpy(nb = eos(nb), " Conf");
++            if (cond & BL_MASK_HALLU)
++                Strcpy(nb = eos(nb), " Hallu");
++            if (cond & BL_MASK_LEV)
++                Strcpy(nb = eos(nb), " Lev");
++            if (cond & BL_MASK_FLY)
++                Strcpy(nb = eos(nb), " Fly");
++            if (cond & BL_MASK_RIDE)
++                Strcpy(nb = eos(nb), " Ride");
++            /* We've broken the loop a little, so this should be updated
++             * independently */
++            lisp_cmd("status-condition-update",
++                     lisp_quote;
++                     lisp_list(status_vals[idx];););
++        } else {
++            if (idx == BL_GOLD) {
++                /* decode once instead of every time it's displayed */
++                status_vals[BL_GOLD][0] = ' ';
++                text = decode_mixed(&status_vals[BL_GOLD][1], text);
++                /* I'm too lazy to figure out how to cut out the “$:” prefix
++                   here, so its handled by the Lisp side when gold is updated.
++                   */
++            }
++            lisp_cmd("status-update", lisp_string(status_fieldnm[idx]);
++                     lisp_string(text); lisp_int(percent););
++        }
++    } else { /* BL_FLUSH */
++        lisp_cmd("print-status", );
++    }
++}
++
++void lisp_putstr(winid window, int attr, const char *str)
++{
++    int mesgflags;
++    mesgflags = attr & (ATR_URGENT | ATR_NOHISTORY);
++    attr &= ~mesgflags;
++
++    if (window == WIN_STATUS) {
++        /* generate_status_line(); */
++        lisp_cmd("print-status",);
++    } else if (window == WIN_MESSAGE && (mesgflags & ATR_NOHISTORY) != 0)
++        lisp_cmd("message-nohistory", lisp_literal(attr_to_string(attr));
++                 lisp_string(str));
++    else if (window == WIN_MESSAGE)
++        lisp_cmd("message", lisp_literal(attr_to_string(attr));
++                 lisp_string(str));
++    else
++        lisp_cmd("menu-putstr", lisp_int(window);
++                 lisp_literal(attr_to_string(attr)); lisp_string(str));
++}
++
++void
++lisp_start_menu(winid window, unsigned long mbehavior UNUSED)
++{
++  lisp_menu_list_num = 0;
++  lisp_current_accelerator = 'a';
++  lisp_cmd ("start-menu", lisp_int (window));
++}
++
++void lisp_add_menu(
++    winid window,                /* window to use, must be of type NHW_MENU */
++    const glyph_info *glyphinfo, /* glyph to display with item */
++    const anything *identifier,	 /* what to return if selected */
++    char ch,                     /* keyboard accelerator (0 = pick our own) */
++    char gch,                    /* group accelerator (0 = no group) */
++    int attr,                    /* attribute for string (like tty_putstr()) */
++    int clr UNUSED,              /* color for string */
++    const char *str,             /* menu string */
++    unsigned itemflags)
++{
++  if (identifier->a_void)
++    {
++      lisp_menu_item_list[lisp_menu_list_num].identifier = *identifier;
++      if (ch == 0)
++	{
++	  ch = lisp_menu_item_list[lisp_menu_list_num].accelerator = lisp_current_accelerator;
++	  if (lisp_current_accelerator == 'z')
++	    lisp_current_accelerator = 'A';
++	  else
++	    lisp_current_accelerator++;
++	}
++      else
++	lisp_menu_item_list[lisp_menu_list_num].accelerator = ch;
++
++      lisp_menu_list_num++;
++    }
++  else
++    ch = -1;
++
++  lisp_cmd ("add-menu",
++	    lisp_int (window);
++	    lisp_int (glyphinfo->glyph);
++	    lisp_int (glyphinfo->gm.tileidx); // UNUSED
++	    lisp_int (ch);
++	    lisp_int (gch);
++	    lisp_literal (attr_to_string (attr));
++	    lisp_string (str);
++	    (itemflags & (1<<MENU_ITEMFLAGS_SELECTED)) ? lisp_t : lisp_nil);
++}
++
++void
++lisp_end_menu(
++    winid window,       /* menu to use */
++    const char *prompt)	/* prompt to for menu */
++{
++  lisp_cmd ("end-menu",
++	    lisp_int (window);
++	    lisp_string (prompt));
++}
++
++static int
++lisp_get_menu_identifier(char ch, anything *identifier)
++{
++  int i;
++
++  for(i=0; i < lisp_menu_list_num; i++)
++    {
++      if( lisp_menu_item_list[i].accelerator == ch )
++	{
++	  *identifier = lisp_menu_item_list[i].identifier;
++	  return 1;
++	}
++    }
++
++  return 0;
++}
++
++int
++lisp_select_menu(winid window, int how, menu_item **menu_list)
++{
++  const char *delim = "() \n";
++  char *list;
++  char *token;
++  int size = 0;
++
++  lisp_cmd ("select-menu",
++	    lisp_int (window);
++	    lisp_literal (how_to_string (how)));
++
++  read_string ("menu", &list);
++
++/*   lisp_prompt ("menu"); */
++/*   fgets (list, LINESIZ, stdin); */
++
++  /* The client should submit a structure like this:
++
++   ((ch count) (ch count) (ch count) ...)
++
++   where ch is the accelerator for the menu item and count is the
++   number of them to select.
++
++   We strtok it so we just get id count id count id count. */
++
++  token = strtok (list, delim);
++
++  /* Start with some memory so realloc doesn't fail. */
++  *menu_list = malloc (sizeof (menu_item));
++  if (*menu_list == NULL)
++    {
++      panic ("Memory allocation failure; cannot get %lu bytes",
++	     sizeof (menu_item));
++    }
++  size = 0;
++
++  while (token != NULL)
++    {
++      /* Make more room in the array for the new item */
++      size++;
++      if ((*menu_list = realloc (*menu_list, size * sizeof (menu_item))) == NULL)
++	{
++	  panic ("Memory allocation failure; cannot get %lu bytes",
++		 size * sizeof (menu_item));
++	}
++
++      /* assign the item ID */
++      lisp_get_menu_identifier (atoi (token), &(*menu_list)[size-1].item );
++
++      /* Read the item count */
++      token = strtok (NULL, delim);
++      (*menu_list)[size-1].count = atoi (token);
++
++      /* read the next item ID */
++      token = strtok (NULL, delim);
++    }
++
++  free (list);
++
++  return size;
++}
++
++/* This is a tty-specific hack. Do we need it? */
++char
++lisp_message_menu(char let, int how, const char *mesg)
++{
++  lisp_cmd ("message-menu",
++	    lisp_int (let);
++	    lisp_literal (how_to_string (how));
++	    lisp_string (mesg));
++  return '\0';
++}
++
++static int
++lisp_get_cmd(const char *str)
++{
++  int i;
++
++  for (i=0; cmd_index[i].name != (char *)0; i++)
++    {
++      if (!strcmp (str, cmd_index[i].name))
++        return i;
++    }
++
++  return -1;
++}
++
++static int
++lisp_get_ext_cmd_id (const char *str)
++{
++  int i;
++
++  for (i=0; extcmdlist[i].ef_txt != (char *)0; i++) {
++    if (!strcmp (str, extcmdlist[i].ef_txt)) return i;
++  }
++
++  return -1;
++}
++
++int
++lisp_nhgetch(void)
++{
++  /* multi is not 0 if this  */
++  static char count_buf[BUFSIZ] = "";
++  static char *count_pos = count_buf;
++  static int count_cmd = -1;
++  int cmd;
++
++  if (*count_pos)
++    {
++      char *tmp = count_pos;
++      count_pos++;
++      return *tmp;
++    }
++
++  if (count_cmd >= 0)
++    {
++      cmd = count_cmd;
++      count_cmd = -1;
++    }
++  else
++    {
++      char cmdstr[BUFSZ];
++      int nh_cmd = 0;
++
++      while (!nh_cmd)
++        {
++          read_command ("command", cmdstr, count_buf);
++
++          count_pos = count_buf;
++          cmd = lisp_get_cmd (cmdstr);
++          if (cmd == -1)
++            {
++              printf ("(nhapi-message 'atr-none \"undefined-command %s\")\n", cmdstr);
++            }
++          else if (cmd_index[cmd].type == CMD_LISP)
++            {
++              /* We have to handle Lisp commands in this inner loop, because
++                 they don't interact with the nethack layer. */
++              /* FIXME: Maybe this should go in an array? */
++              if (!strcmp(cmd_index[cmd].name, "options"))
++                {
++                  get_options();
++                }
++            }
++          else
++            {
++              /* We have a nh command. */
++              nh_cmd = 1;
++            }
++        }
++
++      if (atoi (count_pos) > 1)
++        {
++          char* tmp = count_pos;
++          count_pos++;
++          count_cmd = cmd;
++          return *tmp;
++        }
++      else
++        {
++          /* Since the count is 1, zero out the string. */
++          *count_pos = 0;
++        }
++    }
++
++    if (cmd_index[cmd].type == CMD_KEY) {
++        return cmd_index[cmd].cmd;
++    } else if (cmd_index[cmd].type == CMD_EXT) {
++        if ((extended_cmd_id = lisp_get_ext_cmd_id(cmd_index[cmd].name))
++            == -1) {
++            /* Can never happen. */
++            printf("%s:%d: Bad extended command name\n", __FILE__, __LINE__);
++        }
++        return '#';
++    } else {
++        impossible("Impossible command type: %d", cmd_index[cmd].type);
++    }
++}
++
++int
++lisp_nh_poskey(coordxy *x UNUSED, coordxy *y UNUSED, int *mod UNUSED)
++{
++  return lisp_nhgetch();
++}
++
++static boolean inven_win_created = FALSE;
++
++/* These globals are used to keep track of window IDs. */
++static winid *winid_list = NULL;
++static int winid_list_len = 0;
++static int winid_list_max = 0;
++
++/* returns index into winid_list that can be used. */
++static int
++find_empty_cell(void)
++{
++  int i;
++
++  /* Check for a vacant spot in the list. */
++  for (i=0; i<winid_list_len; i++)
++    {
++      if (winid_list[i] == -1) return i;
++    }
++
++  /* no vacant ones, so grow the array. */
++  if (winid_list_len >= winid_list_max)
++    {
++      winid_list_max *= 2;
++      winid_list = realloc (winid_list, sizeof (int) * winid_list_max);
++      if (winid_list == NULL)
++	bail ("Out of memory\n");
++    }
++  winid_list_len++;
++
++  return winid_list_len-1;
++}
++
++static int
++winid_is_taken (winid n)
++{
++  int i;
++
++  for (i=0; i<winid_list_len; i++)
++    if (winid_list[i] == n) return 1;
++
++  return 0;
++}
++
++static int
++add_winid (winid n)
++{
++  if (winid_is_taken (n)) return 0; /* failed. */
++
++  winid_list[find_empty_cell()] = n;
++  return 1; /* success! */
++}
++
++static winid
++get_unique_winid (void)
++{
++  winid i;
++
++  /* look for a unique number, and add it to the list of taken
++     numbers. */
++  i = 0;
++  while (!add_winid (i)) i++;
++
++  return i;
++}
++
++/* When a window is destroyed, it gives back its window number with
++   this function. */
++static void
++return_winid (winid n)
++{
++  int i;
++
++  for (i=0; i<winid_list_len; i++)
++    {
++      if (winid_list[i] == n)
++	{
++	  winid_list[i] = -1;
++	  return;
++	}
++    }
++}
++
++static void
++init_winid_list (void)
++{
++  winid_list_max = 10;
++  winid_list_len = 0;
++
++  winid_list = malloc (winid_list_max * sizeof (int));
++}
++
++/* Prints a create_nhwindow function and expects from stdin the id of
++   this new window as a number. */
++winid
++lisp_create_nhwindow(int type)
++{
++  winid id = get_unique_winid();
++
++  switch (type)
++    {
++    case NHW_MESSAGE:
++      lisp_cmd ("create-message-window",);
++      break;
++    case NHW_MAP:
++      lisp_cmd ("create-map-window",);
++      break;
++    case NHW_STATUS:
++      lisp_cmd ("create-status-window",);
++      break;
++    case NHW_TEXT:
++      lisp_cmd ("create-text-window", lisp_int (id));
++      break;
++    case NHW_MENU:
++      if (!inven_win_created)
++	{
++	  lisp_cmd ("create-inventory-window", lisp_int (id));
++	  inven_win_created = TRUE;
++	}
++      else
++	lisp_cmd ("create-menu-window", lisp_int (id));
++      break;
++    default:
++      impossible ("Unknown window type: %d", type);
++    };
++
++  return id;
++}
++
++void
++lisp_clear_nhwindow(winid window)
++{
++  if (window == WIN_MESSAGE)
++    lisp_cmd ("clear-message",);
++  else if (window == WIN_MAP)
++    lisp_cmd ("clear-map",);
++  else
++    /* are other window types ever cleared? */
++    lisp_cmd ("error", lisp_string("clearing unknown winid"));
++}
++
++void
++lisp_display_nhwindow(winid window, boolean blocking)
++{
++  /* don't send display messages for anything but menus */
++  char *dummy;
++  if (window != WIN_MESSAGE && window != WIN_STATUS && window != WIN_MAP)
++    {
++      lisp_cmd ("display-menu", lisp_int (window));
++      read_string ("dummy", &dummy);
++      free (dummy);
++    }
++  else if (blocking)
++    {
++      if (window == WIN_MESSAGE)
++	{
++	  /* blocking on the message window happens only at the end of
++	     the game */
++	  lisp_cmd ("end",);
++	}
++      else
++	{
++	  lisp_cmd ("block",);
++	  read_string ("dummy", &dummy);
++	  free (dummy);
++	}
++    }
++  else if (window == WIN_STATUS)
++    {
++      /* initial window setup hack here :) */
++      lisp_cmd ("restore-window-configuration",);
++    }
++}
++
++void
++lisp_destroy_nhwindow(winid window)
++{
++  if ((window != WIN_STATUS)
++      && (window != WIN_MESSAGE)
++      && (window != WIN_MAP))
++    {
++      lisp_cmd ("destroy-menu", lisp_int (window));
++      return_winid (window);
++    }
++}
++
++void
++lisp_update_inventory(int arg UNUSED)
++{
++  if (iflags.perm_invent)
++    {
++      lisp_cmd ("update-inventory",);
++      display_inventory(NULL, FALSE);
++    }
++}
++
++int
++lisp_doprev_message(void)
++{
++  lisp_cmd ("doprev-message",);
++  return 0;
++}
++
++void
++lisp_nhbell(void)
++{
++  lisp_cmd ("nhbell",);
++}
++
++/* Can be an empty call says window.doc. */
++void
++lisp_mark_synch(void)
++{
++  /* lisp_cmd ("mark-sync",); */
++}
++
++void
++lisp_wait_synch(void)
++{
++  lisp_cmd ("wait-synch",);
++}
++
++/* Since nethack will never be suspended, we need not worry about this
++   function. */
++void
++lisp_resume_nhwindows(void)
++{
++  return;
++}
++
++/* Since nethack will never be suspended, we need not worry about this
++   function. */
++void
++lisp_suspend_nhwindows(const char *str UNUSED)
++{
++  return;
++}
++
++/* All keys are defined in emacs, so number_pad makes no sense. */
++void
++lisp_number_pad(int state UNUSED)
++{
++  return;
++}
++
++void
++lisp_init_nhwindows(int *argcp, char **argv)
++{
++  int i;
++
++  /* Print each command-line option, constructing a list of strings */
++  lisp_cmd ("init-nhwindows",
++	    for (i=0; i<*argcp; i++)
++	      lisp_string (argv[i]));
++
++  /* FIXME: doesn't remove the arguments parsed, as specified in the
++     api doc. */
++
++  /* Setup certain flags lisp clients need */
++  iflags.num_pad = FALSE;
++#ifdef EXP_ON_BOTL		/* we are going to lose if Nethack is
++				   compiled without this option -rcy */
++  flags.showexp = TRUE;
++#endif
++  flags.time = TRUE;
++
++  /* inform nethack that the windows have been initialized. */
++  iflags.window_inited = TRUE;
++
++  init_winid_list();
++}
++
++void
++lisp_exit_nhwindows (const char *str)
++{
++  lisp_cmd ("exit-nhwindows ", lisp_string (str));
++}
++
++void
++lisp_delay_output(void)
++{
++  char *dummy;
++  lisp_cmd ("delay-output",);
++  read_string ("dummy", &dummy);
++  free (dummy);
++}
++
++void
++lisp_getlin(const char *question, char *input)
++{
++  char *tmp;
++  lisp_cmd ("getlin", lisp_string (question));
++  read_string ("string", &tmp);
++  /* FIXME: potential buffer overflow. */
++  strcpy (input, tmp);
++}
++
++int
++lisp_get_ext_cmd(void)
++{
++  int cmd;
++  if (extended_cmd_id != 0) {
++      cmd = extended_cmd_id;
++      extended_cmd_id = 0;
++  } else {
++      int i;
++
++      printf("(nhapi-get-ext-cmd '(");
++
++      for (i = 0; extcmdlist[i].ef_txt != (char *) 0; i++) {
++          printf("(\"%s\" . %d)", extcmdlist[i].ef_txt, i);
++      }
++      printf("))\n");
++
++      read_int("number", &cmd);
++  }
++
++  return cmd;
++}
++
++void
++lisp_display_file(const char *str, boolean complain)
++{
++  lisp_cmd ("display-file",
++	    lisp_string (str);
++	    complain ? lisp_t : lisp_nil);;
++}
++
++char
++lisp_yn_function(
++    const char *ques,
++    const char *choices,
++    char def)
++{
++  int answer;
++
++  /* Some questions have special functions. */
++  if (!strncmp (ques, "In what direction", 17)
++      || !strncmp (ques, "Talk to whom? (in what direction)", 33))
++    {
++      char *dir;
++      lisp_cmd ("ask-direction",
++		lisp_string (ques));
++      read_string ("direction", &dir);
++      if (!strcmp (dir, "n"))
++	answer = 'k';
++      else if (!strcmp (dir, "s"))
++	answer = 'j';
++      else if (!strcmp (dir, "e"))
++	answer = 'l';
++      else if (!strcmp (dir, "w"))
++	answer = 'h';
++      else if (!strcmp (dir, "ne"))
++	answer = 'u';
++      else if (!strcmp (dir, "nw"))
++	answer = 'y';
++      else if (!strcmp (dir, "se"))
++	answer = 'n';
++      else if (!strcmp (dir, "sw"))
++	answer = 'b';
++      else if (!strcmp (dir, "up"))
++	answer = '<';
++      else if (!strcmp (dir, "down"))
++	answer = '>';
++      else if (!strcmp (dir, "self"))
++	answer = '.';
++      else
++	{
++	  if (def == '\0')
++	    answer = 0x20;		/* space */
++	  else
++	    answer = def;
++	}
++
++      free (dir);
++    }
++  else
++    {
++      lisp_cmd ("yn-function",
++		lisp_string (ques);
++		lisp_string (choices);
++		lisp_int (def));
++      read_int ("number", &answer);
++    }
++
++  return (char)answer;
++}
++
++#ifdef POSITIONBAR
++void
++lisp_update_positionbar(char *features)
++{
++  lisp_cmd ("update-positionbar", lisp_string (features));
++}
++#endif
++
++#define zap_color(n)  zapcolors[n]
++#define cmap_color(n) defsyms[n].color
++#define obj_color(n)  objects[n].oc_color
++#define mon_color(n)  mons[n].mcolor
++#define invis_color(n) NO_COLOR
++#define pet_color(n)  mons[n].mcolor
++#define warn_color(n) def_warnsyms[n].color
++
++void
++lisp_print_glyph(
++    winid window,
++    coordxy x, coordxy y,
++    const glyph_info *glyphinfo,
++    const glyph_info *bkglyphinfo UNUSED)
++{
++    int ch;
++    int	    color;
++    unsigned special;
++    int glyph;
++
++    glyph = glyphinfo->glyph;
++    special = glyphinfo->gm.glyphflags;
++    ch = glyphinfo->ttychar;
++    color = glyphinfo->gm.sym.color;
++
++    /* If the user doesn't want to highlight the pet, then we erase
++       the PET bit from special. In the lisp code the special argument
++       will be 'pet if the glyph is a pet and will be printed in the
++       color of the pet highlight face. But we don't want this if the
++       user hasn't turned on hilite_pet. */
++    if (!iflags.hilite_pet)
++      {
++        special &= ~MG_PET;
++      }
++
++    if (window == WIN_MAP)
++      {
++        /* The last parameter, special, is optional. It is only
++           present when the tile is special in some way. */
++        lisp_cmd("print-glyph",
++                 lisp_int(x);
++                 lisp_int(y);
++                 lisp_int(color);
++                 lisp_int(glyph);
++                 lisp_int(glyphinfo->gm.tileidx); // UNUSED
++                 lisp_int(ch);
++                 if (special)
++                     lisp_literal(special_glyph_to_string(special)););
++      }
++    else
++      lisp_cmd ("error",
++                lisp_string ("lisp_print_glyph bad window");
++                lisp_int (window));
++}
++
++#ifdef CLIPPING
++void
++lisp_cliparound(int x UNUSED, int y UNUSED)
++{
++  /* as far as I can tell, the x and y values here are exactly the
++     ones given by the next lisp_curs call, so its redundant
++     information -rcy */
++
++  /*   lisp_cmd ("cliparound", lisp_int (x); lisp_int (y)); */
++}
++#endif
++
++win_request_info *lisp_ctrl_nhwindow(
++    winid window UNUSED,
++    int request UNUSED,
++    win_request_info *wri UNUSED)
++{
++    return NULL;
++}

@@ -48,6 +48,10 @@ include/config.h
 include/patchlevel.h
 include/tradstdc.h
 include/winlisp.h
+include/winprocs.h
+src/mdlib.c
+src/options.c
+src/rip.c
 src/windows.c
 sys/unix/Makefile.src
 sys/unix/hints/lisp
