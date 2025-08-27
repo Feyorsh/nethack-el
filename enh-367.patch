@@ -319,7 +319,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,495 @@
+@@ -0,0 +1,501 @@
++2025-08-27  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_display_nhwindow): Only send "end" if the game
++	is actually over. This fixes an issue where MSGTYPE=stop borks the
++	window configuration.
++
 +2025-08-26  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_select_menu): Loop until input conforms to
@@ -817,7 +823,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1845 @@
+@@ -0,0 +1,1843 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2328,10 +2334,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    }
 +  else if (blocking)
 +    {
-+      if (window == WIN_MESSAGE)
++      if (window == WIN_MESSAGE && program_state.gameover)
 +	{
-+	  /* blocking on the message window happens only at the end of
-+	     the game */
 +	  lisp_cmd ("end",);
 +	}
 +      else
