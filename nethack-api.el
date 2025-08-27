@@ -833,7 +833,8 @@ the menu is dismissed."
           (setq nh-inventory-need-update nil)
           (nh-send nil))
         (progn
-          (setq nh-window-configuration (current-window-configuration))
+          (unless nh-active-menu-buffer
+            (setq nh-window-configuration (current-window-configuration)))
           (if (one-window-p)
             (switch-to-buffer buffer)
             ;; Use the window displaying the message buffer for the menu

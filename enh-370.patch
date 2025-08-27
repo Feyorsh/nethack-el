@@ -704,7 +704,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,497 @@
+@@ -0,0 +1,503 @@
++2025-08-26  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_select_menu): Loop until input conforms to
++	expectations (prevents e.g. a movement command from malforming a
++	menu selection).
++
 +2025-08-23  George Huebner  <george@feyor.sh>
 +
 +	* mail.c (readmail): Call `child` with wt=0 to avoid calling
@@ -1205,7 +1211,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1748 @@
+@@ -0,0 +1,1750 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2309,14 +2315,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +  char *token;
 +  int size = 0;
 +
++redo:
 +  lisp_cmd ("select-menu",
 +	    lisp_int (window);
 +	    lisp_literal (how_to_string (how)));
 +
 +  read_string ("menu", &list);
-+
-+/*   lisp_prompt ("menu"); */
-+/*   fgets (list, LINESIZ, stdin); */
 +
 +  /* The client should submit a structure like this:
 +
@@ -2349,7 +2353,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	}
 +
 +      /* assign the item ID */
-+      lisp_get_menu_identifier (atoi (token), &(*menu_list)[size-1].item );
++      if (!lisp_get_menu_identifier (atoi (token), &(*menu_list)[size-1].item )) {
++          free(*menu_list);
++          free(list);
++          goto redo;
++      }
 +
 +      /* Read the item count */
 +      token = strtok (NULL, delim);
