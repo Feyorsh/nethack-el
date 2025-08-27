@@ -62,7 +62,7 @@
 (defun nhapi-raw-print (str)
   (save-current-buffer
     (let ((buffer (get-buffer-create nh-raw-print-buffer-name)))
-      (pop-to-buffer buffer)
+      (switch-to-buffer buffer)
       (insert str "\n"))))
 
 (defun nhapi-raw-print-bold (str)
@@ -838,22 +838,27 @@ the menu is dismissed."
           (nh-send nil))
         (progn
           (setq nh-window-configuration (current-window-configuration))
-          ;; Use the window displaying the message buffer for the menu
-          ;; buffer, if possible.
-          (let ((message-window (and nh-message-buffer
-                                     (get-buffer-window nh-message-buffer)))
-                (inventory-window (and nh-inventory-buffer
-                                       (get-buffer-window nh-inventory-buffer))))
-            (if (or (and inventory-window (equal buffer nh-inventory-buffer))
-                    (not message-window))
-                (pop-to-buffer (nh-menu-buffer menuid) nil t)
-              (select-window message-window)
-              (switch-to-buffer (nh-menu-buffer menuid) t)))
-          ;; make window larger, if necessary
-          (let ((bh (nh-window-buffer-height (selected-window)))
-                (wh (- (window-height) 1)))
-            (when (> bh wh)
-              (enlarge-window (- bh wh))))
+          (if (one-window-p)
+            (switch-to-buffer buffer)
+            ;; Use the window displaying the message buffer for the menu
+            ;; buffer, if possible.
+            (let ((message-window (and nh-message-buffer
+                                       (get-buffer-window nh-message-buffer)))
+                  (inventory-window (and nh-inventory-buffer
+                                         (get-buffer-window nh-inventory-buffer))))
+              (if (or (and inventory-window (equal buffer nh-inventory-buffer))
+                      (not message-window))
+                  (switch-to-buffer-other-window (nh-menu-buffer menuid) t)
+                ;; this codepath basically means the window displaying perm_invent will be chosen to display stuff,
+                ;; *except* at game over, when it will be display in the window that usually displays the game map.
+                ;; yes, this is a stupid way of doing it.
+                (select-window message-window)
+                (switch-to-buffer-other-window (nh-menu-buffer menuid) t)))
+            ;; make window larger, if necessary
+            (let ((bh (nh-window-buffer-height (selected-window)))
+                  (wh (- (window-height) 1)))
+              (when (> bh wh)
+                (enlarge-window (- bh wh)))))
           (nh-menu-mode how)
           (goto-char (point-min))
           (message "Displaying menu")

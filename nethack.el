@@ -681,7 +681,7 @@ PROC is the process object and MSG is the exit message."
     (nethack-kill-buffers))
   (let ((raw-print-buffer (get-buffer nh-raw-print-buffer-name)))
     (when raw-print-buffer
-      (pop-to-buffer raw-print-buffer))))
+      (switch-to-buffer raw-print-buffer))))
 
 (defvar nh-log-process-text t)
 (defun nh-log (string)
