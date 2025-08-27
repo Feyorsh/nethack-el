@@ -715,7 +715,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,521 @@
+@@ -0,0 +1,526 @@
++2025-09-01  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_start_menu): Don't use '[', '\', ']', '^', '_',
++	or '`' as accelerators.
++
 +2025-08-28  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_procs): Use `genl_can_suspend_no` to
@@ -1240,7 +1245,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1749 @@
+@@ -0,0 +1,1751 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -2288,6 +2293,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	  ch = lisp_menu_item_list[lisp_menu_list_num].accelerator = lisp_current_accelerator;
 +	  if (lisp_current_accelerator == 'z')
 +	    lisp_current_accelerator = 'A';
++	  else if (lisp_current_accelerator == 'Z')
++	    lisp_current_accelerator = 'a';
 +	  else
 +	    lisp_current_accelerator++;
 +	}

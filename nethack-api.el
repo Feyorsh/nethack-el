@@ -675,7 +675,7 @@ was actually toggled."
           (old-point (point)))
       (goto-char (point-min))
       (if (re-search-forward (format "^[%c] \\([-+]\\|[0-9]+\\) .+$"
-                                     last-command-event)
+                                     last-command-event))
                              nil t)
           (let ((value (match-string 1))
                 (start (match-beginning 1))

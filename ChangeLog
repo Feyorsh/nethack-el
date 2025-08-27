@@ -10,6 +10,10 @@
 
 2025-08-26  George Huebner  <george@feyor.sh>
 
+        * nethack-keys.el (nh-accelerator-chars): Include `$` and `:`.
+
+2025-08-26  George Huebner  <george@feyor.sh>
+
         * nethack-api.el (nhapi-select-menu): Do not update window
 	configuration if a menu is selected while it is already displayed
 	(because of invalid input).
