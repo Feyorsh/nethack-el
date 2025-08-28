@@ -916,10 +916,6 @@ the menu is dismissed."
   ;; Tell process to continue
   (nh-send 'dummy))
 
-(defun nhapi-outrip (window who gold message)
-  ""
-  (with-current-buffer (nh-menu-buffer window)
-    (insert (concat who " -- " message) "\n")))
 
 (defun nhapi-end ()
   (message "Goodbye.")
