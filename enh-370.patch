@@ -238,6 +238,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) execl(mr, mr, (char *) 0);
          nh_terminate(EXIT_FAILURE);
      }
+--- NetHack-NetHack-3.7.0_WIP/src/cmd.c	2025-08-28 11:08:57.181900595 -0500
++++ nethack/src/cmd.c	2025-08-28 11:08:41.499298196 -0500
+@@ -1841,7 +1841,7 @@
+     { '!',    "shell",
+               "leave game to enter a sub-shell ('exit' to come back)",
+               dosh_core, (IFBURIED | GENERALCMD | NOFUZZERCMD
+-#ifndef SHELL
++#if !defined(SHELL) || defined(WIN_LISP)
+                         | CMD_NOT_AVAILABLE
+ #endif /* SHELL */
+                         ), NULL },
 --- NetHack-NetHack-3.7.0_WIP/sys/unix/Makefile.src	2025-08-24 10:26:20.508439686 -0500
 +++ nethack/sys/unix/Makefile.src	2025-08-24 10:32:05.578236714 -0500
 @@ -317,9 +317,12 @@
@@ -704,7 +715,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,509 @@
+@@ -0,0 +1,516 @@
++2025-08-28  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (cmd_index): Add '!' for toggling menus in getpos
++	(note that this is not the shell extended command).
++	* ../../src/cmd.c (extcmdlist): Ensure shell extended command is
++	not defined.
++
 +2025-08-27  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_nhwindow): Only send "end" if the game
@@ -1217,7 +1235,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1748 @@
+@@ -0,0 +1,1749 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -1380,6 +1398,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +   {"togglepickup", CMD_KEY, '@'},
 +   {"prinuse", CMD_KEY, '*'},
 +   {"countgold", CMD_KEY, '$'},
++   {"getpos_menu", CMD_KEY, '!'},
 +
 +   {"kick", CMD_KEY, C('d')},
 +   {"listspells", CMD_KEY, '+'},
