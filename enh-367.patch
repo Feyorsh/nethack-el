@@ -166,6 +166,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) execl(mr, mr, (char *) 0);
          nh_terminate(EXIT_FAILURE);
      }
+--- NetHack-NetHack-3.6.7_Released/clean/src/cmd.c	2025-08-27 11:53:15.060018445 -0500
++++ nethack/src/cmd.c	2025-08-28 11:05:53.360239625 -0500
+@@ -3467,7 +3467,7 @@
+             doprwep, IFBURIED },
+     { '!', "shell", "do a shell escape",
+             dosh_core, IFBURIED | GENERALCMD
+-#ifndef SHELL
++#if !defined(SHELL) || defined(WIN_LISP)
+                        | CMD_NOT_AVAILABLE
+ #endif /* SHELL */
+     },
 --- NetHack-NetHack-3.6.7_Released/sys/unix/Makefile.src	2023-02-15 15:52:57.000000000 -0600
 +++ nethack/sys/unix/Makefile.src	2025-03-31 01:38:34.624817803 -0500
 @@ -266,9 +266,12 @@
@@ -319,7 +330,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,501 @@
+@@ -0,0 +1,508 @@
++2025-08-28  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (cmd_index): Add '!' for toggling menus in getpos
++	(note that this is not the shell extended command).
++	* ../../src/cmd.c (extcmdlist): Ensure shell extended command is
++	not defined.
++
 +2025-08-27  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_nhwindow): Only send "end" if the game
@@ -823,7 +841,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-03-31 01:40:08.897561983 -0500
-@@ -0,0 +1,1843 @@
+@@ -0,0 +1,1844 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -991,6 +1009,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +   {"togglepickup", CMD_KEY, '@'},
 +   {"prinuse", CMD_KEY, '*'},
 +   {"countgold", CMD_KEY, '$'},
++   {"getpos_menu", CMD_KEY, '!'},
 +
 +   {"kick", CMD_KEY, C('d')},
 +   {"listspells", CMD_KEY, '+'},

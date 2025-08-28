@@ -121,10 +121,11 @@
 
 (defun-nethack-command command-help "Tell what a command does" "whatdoes") ;& ; can be done by emacs
 
-(defun-nethack-command shell            ; !
-  "Do a shell escape (only if defined)"
-  nil ;; "sh"
-  (shell))
+;; unfortunately making '!' work correctly as both shell and GETPOS_MENU is nontrivial.
+;; Just use M-x eshell, dammit!
+(defun-nethack-command getpos-menu            ; !
+  "Toggle menus for selection in getpos"
+  "getpos_menu")
 
 (defun-nethack-command show-discoveries "Show what object types have been discovered" "discovered") ;\
 (defun-nethack-command rest-one-move "Rest one move while doing nothing" "null") ;.

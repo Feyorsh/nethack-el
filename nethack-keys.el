@@ -229,7 +229,7 @@
     ;;&       Tell what a command does
     (define-key map "&" 'nethack-command-command-help)
     ;;!       Do a shell escape (only if defined)
-    (define-key map "!" 'nethack-command-shell)
+    (define-key map "!" 'nethack-command-getpos-menu)
     ;;\       Show what object types have been discovered
     (define-key map "\\" 'nethack-command-show-discoveries)
     ;;.       Rest one move while doing nothing
