@@ -1,3 +1,13 @@
+2025-08-28  George Huebner  <george@feyor.sh>
+
+        * nethack.el (nethack): Add `nethack-wizmode` option: this will
+	run NetHack with the debug flag using sudo (or doas) and will pass
+	the user's .nethackrc as an environment variable (put
+	"--nethackrc:..." in `nethack-program-args` if this is not
+	desirable). This is a somewhat conservative approach as assuming
+	the user has to build NetHack to use nethack-el they could just
+	add their user to WIZARDS, but eh.
+
 2025-08-26  George Huebner  <george@feyor.sh>
 
         * nethack-keys.el (nh-accelerator-chars): Include `$` and `:`.
