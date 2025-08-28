@@ -715,7 +715,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,516 @@
+@@ -0,0 +1,521 @@
++2025-08-28  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_procs): Use `genl_can_suspend_no` to
++	unconditionally disable suspend.
++
 +2025-08-28  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (cmd_index): Add '!' for toggling menus in getpos
@@ -1556,7 +1561,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +    genl_status_finish,
 +    genl_status_enablefield,
 +    lisp_status_update,
-+    genl_can_suspend_yes,
++    genl_can_suspend_no,
 +    lisp_update_inventory,
 +    lisp_ctrl_nhwindow,
 +};
