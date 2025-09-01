@@ -446,7 +446,7 @@ version and the correct version for the lisp-patch."
           nethack-el-earliest-compatible-version
           (and (string-match
                 (concat "NetHack Version "
-                        nethack-version
+                        "[0-9]+\\.[0-9]+\\.[0-9]+\\(?:-[0-9]+\\)?"
                         " lisp-patch "
                         "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)")
                 version-string)
