@@ -239,19 +239,15 @@ Return the modified alist."
              ,@body)
          (goto-char ,old-pnt)))))
 
-(defun nh-gamegrid-set-cell (x y ch &optional oldch)
-  "`gamegrid-set-cell', but handles different glyph.
-
-This function will act like `gamegrid-set-cell', but the CH and OLDCH do not have
-to match up.  This means that we can still assign glyphs from a set of 256 while
-the visual representation may be from Unicode.  This is needed for DEC and IBM
-graphic styles."
+(defun nh-gamegrid-set-cell (x y ch)
+  "Like `gamegrid-set-cell', but skips `gamegrid-set-face'; it doesn't
+work for certain characters in the IBMgraphics symset, and to my
+untrained eye it doesn't actually seem to do anything."
   (save-excursion
     (let ((buffer-read-only nil))
       (goto-char (gamegrid-cell-offset x y))
       (delete-char 1)
-      (insert-char ch 1)
-      (gamegrid-set-face (if oldch oldch ch)))))
+      (insert-char ch 1))))
 
 
 (provide 'nethack-compat)
