@@ -587,15 +587,7 @@ at a time."
 
 
 
-(defcustom nethack-options
-  (nethack-options-parse)
-  "Alist representing nethackrc options
-
-This can be edited through ‘custom-set’."
-  ;; TODO implement customize better
-  ;; :type '(alist :key-type string)
-  :type '(sexp)
-  :group 'nethack)
+(defvar nethack-options nil)
 
 
 

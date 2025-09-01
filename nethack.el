@@ -654,6 +654,7 @@ The variable `nethack-program' is the name of the executable to run."
   "Given the process, start nethack. Assumes nethack is not already running."
   (save-excursion
     (setq nh-proc process)
+    (setq nethack-options (nethack-options-parse))
     (nh-reset-status-variables)
     (set-process-filter nh-proc 'nh-filter)
     (set-process-sentinel nh-proc 'nh-sentinel)))
