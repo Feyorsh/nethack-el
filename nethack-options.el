@@ -38,9 +38,9 @@
 ;;; Code:
 
 (defcustom nethack-options-file
-  ;; On windows this would be ‘\%USERPROFILE%\NetHack\3.6’, but I'm too lazy to
-  ;; figure out how to get this to work between OSs.
-  (expand-file-name "~/.nethackrc")
+  (pcase system-type
+    ('windows-nt (file-name-concat (getenv "USERPROFILE") "NetHack" ".nethackrc"))
+    (_ (expand-file-name "~/.nethackrc")))
   "The nethack configuration file.
 
 The NetHack executable will be called with this in mind.  Some minimal options

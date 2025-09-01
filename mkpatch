@@ -49,6 +49,7 @@ include/patchlevel.h
 include/tradstdc.h
 include/winlisp.h
 include/winprocs.h
+include/windconf.h
 src/mdlib.c
 src/options.c
 src/rip.c
@@ -57,6 +58,8 @@ src/mail.c
 src/cmd.c
 sys/unix/Makefile.src
 sys/unix/hints/lisp
+sys/windows/GNUmakefile
+sys/windows/windmain.c
 util/makedefs.c
 win/tty/termcap.c
 win/lisp/ChangeLog

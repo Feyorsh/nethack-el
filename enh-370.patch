@@ -135,6 +135,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                wp_hup, wp_guistubs, wp_ttystubs,
  #ifdef OUTDATED_STUFF
                wp_mac, wp_Gem, wp_Gnome, wp_amii, wp_amiv,
+--- NetHack-NetHack-3.7.0_WIP/include/windconf.h	2025-09-01 18:37:37.969168936 -0500
++++ nethack/include/windconf.h	2025-08-31 19:06:24.093628491 -0500
+@@ -99,7 +99,7 @@
+  */
+ 
+ #ifdef __GNUC__
+-#define MD_USE_TMPFILE_S
++//#define MD_USE_TMPFILE_S
+ #
+ #ifdef strncasecmp
+ #undef strncasecmp
 --- NetHack-NetHack-3.7.0_WIP/src/mdlib.c	2025-08-24 14:59:57.651359718 -0500
 +++ nethack/src/mdlib.c	2025-08-24 15:30:38.895115826 -0500
 @@ -139,6 +139,9 @@
@@ -713,9 +724,147 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +#
 +#-INCLUDE cross-post.370
 +#
+--- NetHack-NetHack-3.7.0_WIP/sys/windows/GNUmakefile	2025-09-01 18:37:38.089416243 -0500
++++ nethack/sys/windows/GNUmakefile	2025-09-01 13:36:33.153226446 -0500
+@@ -28,7 +28,7 @@
+ # The default make target (so just typing 'mingw32-make').
+ #
+ 
+-default: package
++default: binary
+ 
+ #---------------------------------------------------------------
+ # Where do you want the game to be built (which folder)?
+@@ -47,14 +47,14 @@
+ #
+ # windsound uses built-in Microsoft API's, no 3rd party download is required.
+ 
+-SOUND_LIBRARIES = windsound
++#SOUND_LIBRARIES = windsound
+ 
+ #
+ #---------------------------------------------------------------
+ # Do you want debug information in the executable?
+ #
+ 
+-DEBUGINFO = Y
++DEBUGINFO = N
+ 
+ #
+ #---------------------------------------------------------------
+@@ -99,7 +99,7 @@
+ 
+ $(info Using $(lastword $(MAKEFILE_LIST)))
+ 
+-SKIP_NETHACKW = N
++SKIP_NETHACKW = Y
+ USE_LUADLL = Y
+ WANT_LUAC = N
+ 
+@@ -247,6 +247,7 @@
+ # SSYS    - Shared system files
+ # MSWSYS  - mswin specific files
+ # TTY     - window port files (tty)
++# LISP    - window port files (lisp)
+ # MSWIN   - window port files (win32)
+ # WCURSES - window port files (curses)
+ # WCHAIN  - window port files (chain)
+@@ -263,6 +264,7 @@
+ SNDSYS  =../sound/windsound
+ MSWSYS  =../sys/windows
+ TTY     =../win/tty
++LISP    =../win/lisp
+ MSWIN   =../win/win32
+ WCHAIN  =../win/chain
+ WCURSES =../win/curses
+@@ -365,7 +367,7 @@
+ CONSOLEDEF = $(COMMONDEF) -D_CONSOLE
+ 
+ # To build util targets
+-CFLAGSU = $(CFLAGS) $(CONSOLEDEF) $(DLBFLG)
++CFLAGSU = $(CFLAGS) $(CONSOLEDEF) $(DLBFLG) -DHAS_NO_MKSTEMP
+ 
+ LIBS = -lcomctl32 -lgdi32 -lole32 -lshell32 -luserenv -luuid -lwinmm \
+        -lrpcrt4 -lbcrypt $(LIBUCRT)
+@@ -1215,7 +1217,7 @@
+ 	   getpos glyphs hack insight invent isaac64 light lock \
+ 	   mail makemon mcastu mdlib mhitm mhitu minion mklev mkmap mkmaze mkobj mkroom \
+ 	   mon mondata monmove monst mplayer mthrowu muse music \
+-	   nhlobj nhlsel nhlua windsound o_init objects objnam options \
++	   nhlobj nhlsel nhlua o_init objects objnam options \
+ 	   pager pickup pline polyself potion pray priest quest questpgr \
+ 	   random read rect region report restore rip rnd role rumors \
+ 	   safeproc save sfbase sfstruct shk shknam sit selvar sounds sp_lev \
+@@ -1327,13 +1329,13 @@
+ #==========================================
+ # nethack
+ #==========================================
+-CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
+-CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
++CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
+ 
+ ONH = $(O)nethack
+ 
+-NHONLY = consoletty.o getline.o topl.o wintty.o
+-ifeq "$(ADD_CURSES)" "Y"
++NHONLY = consoletty.o getline.o topl.o wintty.o winlisp.o
++ifeq "nil" "Y"
+ NHCURSESFLAGS = -DCURSES_GRAPHICS -DCURSES_UNICODE $(PDCURSESFLAGS) -DPDC_NCMOUSE
+ CFLAGSNH += $(NHCURSESFLAGS)
+ NHONLY += $(addsuffix .o, cursdial cursinit cursinvt cursmain cursmesg cursmisc cursstat curswins)
+@@ -1420,6 +1422,9 @@
+ $(ONH)/%.o: $(TTY)/%.c $(NHLUAH) | $(ONH)
+ 	$(cc) $(CFLAGSNH) $< -o$@
+ 
++$(ONH)/%.o: $(LISP)/%.c $(NHLUAH) | $(ONH)
++	$(cc) $(CFLAGSNH) $< -o$@
++
+ $(ONH)/%.o: $(WCURSES)/%.c $(NHLUAH) | $(ONH)
+ 	$(cc) $(CFLAGSNH) $(PDCINCL) $< -o$@
+ 
+--- NetHack-NetHack-3.7.0_WIP/sys/windows/windmain.c	2025-09-01 18:37:38.101776324 -0500
++++ nethack/sys/windows/windmain.c	2025-08-31 19:05:58.182621905 -0500
+@@ -87,6 +87,8 @@
+             "mswin";
+ #elif defined(TTY_GRAPHICS)
+             "tty";
++#elif defined(LISP_GRAPHICS)
++            "lisp";
+ #endif
+ #ifdef WANT_GETHDATE
+ static struct stat hbuf;
+@@ -282,11 +284,13 @@
+     if (!iflags.windowtype_locked) {
+ #if defined(TTY_GRAPHICS)
+         Strcpy(default_window_sys, "tty");
++#elif defined(LISP_GRAPHICS)
++        Strcpy(default_window_sys, "lisp");
+ #else
+ #if defined(CURSES_GRAPHICS) && !defined(MSWIN_GRAPHICS)
+         Strcpy(default_window_sys, "curses");
+ #endif /* CURSES */
+-#endif /* TTY */
++#endif /* TTY/LISP */
+         if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
+             windowtype = gc.chosen_windowtype;
+     }
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,532 @@
+@@ -0,0 +1,545 @@
++2025-09-02  George Huebner  <george@feyor.sh>
++
++	* ../../sys/windows/GNUmakefile: Various changes to get the damn
++	thing to compile, notably:
++	- Do not build NetHackW.exe or attempt to package for distribution
++	- Disable sound support
++	- Do not build with DEBUGINFO (needs Windows SDK DLLs to be
++	installed)
++	- Do not build with curses
++	- Remove MD_USE_TMPFILE_S/add HAS_NO_MKSTEMP to fix tmpfile race
++	condition
++        * ../../sys/windows/windmain.c: Make lisp default window port.
++
 +2025-09-02  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_select_menu): Each selected menu item now
