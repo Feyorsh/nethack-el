@@ -432,6 +432,10 @@ accessed 2021-04-23.")
            ((eq cmd 'nethack-command-search) "self")
            (t "nowhere")))))
 
+(defun nhapi-askname ()
+  "Prompt the user for their name."
+  (nh-send (nh-read-line "Who are you? ")))
+
 (defun nhapi-getlin (ques)
   ""
   (nh-send (condition-case nil
