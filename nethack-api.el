@@ -860,15 +860,15 @@ the menu is dismissed."
   "Layout the nethack windows according to the values
 `nethack-status-window-height' and `nethack-message-window-height'."
   (unless nh--window-configuration-before
-  (setq nh--window-configuration-before (window-state-get)))
+    (setq nh--window-configuration-before (window-state-get)))
 
   (set-window-dedicated-p (selected-window) nil)
   (delete-other-windows)
 
   (let* ((w-left (selected-window))
          (w-right (split-window-horizontally (floor (* 0.6 (window-width)))))
-     (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
-     (w-inventory (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height))))))
+         (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
+         (w-inventory (when (nethack-options-set-p "perm_invent") (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height)))))))
          (w-map w-left)
          (w-message w-right))
 
@@ -876,11 +876,13 @@ the menu is dismissed."
     ;; nhapi-create-inventory-window are called after
     ;; nhapi-restore-window-configuration. This may be an issue within the source
     ;; and it may be possible to patch it there, but patching it here is easier.
-    (nhapi-create-map-window)             ; We don't need an if, since these
-    (nhapi-create-inventory-window 3)     ; already have a check for duplicates.
+    (nhapi-create-map-window)             ; We don't need an if, since these already have a check for duplicates.
 
-    (set-window-buffer w-inventory nh-inventory-buffer)
-    (set-window-dedicated-p w-inventory nil)
+    (when (nethack-options-set-p "perm_invent")
+      (nhapi-create-inventory-window 3)
+      (set-window-buffer w-inventory nh-inventory-buffer)
+      (set-window-dedicated-p w-inventory nil))
+
     (set-window-buffer w-map nh-map-buffer)
     (set-window-dedicated-p w-map nil)
     (set-window-buffer w-message nh-message-buffer)
