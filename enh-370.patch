@@ -173,6 +173,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
 --- NetHack-NetHack-3.7.0_WIP/src/options.c	2025-08-24 14:59:57.659282869 -0500
 +++ nethack/src/options.c	2025-08-24 15:30:38.895976359 -0500
+@@ -1068,7 +1068,7 @@
+ #endif
+         return optn_ok;
+     }
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (req == do_handler) {
+         return set_keyhandling_via_option();
+     }
 @@ -3158,7 +3158,7 @@
              bad_negation(allopt[optidx].name, TRUE);
              retval = optn_err;
@@ -801,14 +810,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #==========================================
 -CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
 -CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
-+CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
-+CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
  
  ONH = $(O)nethack
  
 -NHONLY = consoletty.o getline.o topl.o wintty.o
 -ifeq "$(ADD_CURSES)" "Y"
-+NHONLY = consoletty.o getline.o topl.o wintty.o winlisp.o
++NHONLY = winlisp.o
 +ifeq "nil" "Y"
  NHCURSESFLAGS = -DCURSES_GRAPHICS -DCURSES_UNICODE $(PDCURSESFLAGS) -DPDC_NCMOUSE
  CFLAGSNH += $(NHCURSESFLAGS)
@@ -825,7 +834,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
 --- NetHack-NetHack-3.7.0_WIP/sys/windows/windmain.c	2025-09-01 18:37:38.101776324 -0500
 +++ nethack/sys/windows/windmain.c	2025-08-31 19:05:58.182621905 -0500
-@@ -87,6 +87,8 @@
+@@ -69,11 +69,15 @@
+ #ifdef WIN32CON
+ extern int windows_console_custom_nhgetch(void);
+ void safe_routines(void);
++#ifdef TTY_GRAPHICS
+ int tty_self_recover_prompt(void);
+ #endif
++#endif
+ 
+ int other_self_recover_prompt(void);
+ 
++int GUILaunched = FALSE;          /* from consoletty.c */
++
+ char orgdir[PATHLEN];
+ boolean getreturn_enabled;
+ int windows_startup_state = 0;    /* we flag whether to continue with this */
+@@ -87,6 +91,8 @@
              "mswin";
  #elif defined(TTY_GRAPHICS)
              "tty";
@@ -834,7 +859,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
  #ifdef WANT_GETHDATE
  static struct stat hbuf;
-@@ -282,11 +284,13 @@
+@@ -282,11 +288,13 @@
      if (!iflags.windowtype_locked) {
  #if defined(TTY_GRAPHICS)
          Strcpy(default_window_sys, "tty");
@@ -849,9 +874,133 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
              windowtype = gc.chosen_windowtype;
      }
+@@ -304,7 +312,7 @@
+     iflags.use_background_glyph = FALSE;
+     if (WINDOWPORT(mswin))
+         iflags.use_background_glyph = TRUE;
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (WINDOWPORT(tty))
+         consoletty_open(1);
+ #endif
+@@ -314,7 +322,7 @@
+ 
+     init_nhwindows(&argc, argv);
+ 
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (WINDOWPORT(tty))
+         toggle_mouse_support();
+ #endif
+@@ -1047,7 +1055,7 @@
+ 
+     (void) nhclose(fd);
+ 
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (WINDOWPORT(tty))
+         prompt_result = tty_self_recover_prompt();
+     else
+@@ -1064,7 +1072,7 @@
+                     : (prompt_result == 1)
+                         ? "recover the old game"
+                         : "not start a new game");
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (istty)
+         term_clear_screen();
+ #endif
+@@ -1085,7 +1093,7 @@
+         }
+     } else if (prompt_result < 0) {    /* destroy old game */
+         if (eraseoldlocks()) {
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+             if (istty)
+                 term_clear_screen(); /* display gets fouled up otherwise */
+ #endif
+@@ -1164,7 +1172,7 @@
+     return FALSE;
+ }
+ 
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+ /*
+  * returns:
+  *     1 if game should be recovered
+--- NetHack-NetHack-3.7.0_WIP/sys/windows/windsys.c	2025-09-02 16:55:09.027193190 -0500
++++ nethack/sys/windows/windsys.c	2025-09-02 20:02:32.960712885 -0500
+@@ -255,13 +255,15 @@
+ #ifdef TTY_GRAPHICS
+     if (iflags.window_inited)
+         term_end_screen();
+-#endif
++
+     if (WINDOWPORT(tty)) {
+         buf[0] = '\n';
+         (void) vsnprintf(&buf[1], sizeof buf - (1 + sizeof "\n"), s, VA_ARGS);
+         Strcat(buf, "\n");
+         msmsg(buf);
+-    } else {
++    } else
++#endif
++    {
+         (void) vsnprintf(buf, sizeof buf - sizeof "\n", s, VA_ARGS);
+         Strcat(buf, "\n");
+         raw_printf(buf);
+@@ -356,8 +358,10 @@
+ void
+ interject(int interjection_type)
+ {
++#ifdef TTY_GRAPHICS
+     if (interjection_type >= 0 && interjection_type < INTERJECTION_TYPES)
+         msmsg("%s", interjection_buf[interjection_type]);
++#endif
+ }
+ 
+ #ifdef RUNTIME_PASTEBUF_SUPPORT
+@@ -579,7 +583,7 @@
+    initializing the window port */
+ void nethack_enter_windows(void)
+ {
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     if (WINDOWPORT(tty))
+         nethack_enter_consoletty();
+ #endif
+--- NetHack-NetHack-3.7.0_WIP/win/share/safeproc.c	2025-09-02 16:55:09.047228369 -0500
++++ nethack/win/share/safeproc.c	2025-09-02 20:02:32.960803969 -0500
+@@ -498,7 +498,7 @@
+     return;
+ }
+ 
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+ extern win_request_info *tty_ctrl_nhwindow(winid window UNUSED,
+                                           int request UNUSED,
+                                           win_request_info *wri UNUSED);
+@@ -510,7 +510,7 @@
+     int request UNUSED,
+     win_request_info *wri UNUSED)
+ {
+-#ifdef WIN32CON
++#if defined(WIN32CON) && defined(TTY_GRAPHICS)
+     return (*tty_ctrl_nhwindow)(window, request, wri);
+ #else
+     return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,555 @@
++2025-09-02  George Huebner  <george@feyor.sh>
++
++	* ../../src/windows/GNUmakefile: Don't build TTY port.
++	* ../../src/windows/windmain.c: Stricter #ifdef guards to
++	compensate for building with Win 32 Console I/O but not
++	TTY_GRAPHICS.
++        * ../../src/windows/windsys.c: Likewise.
++        * ../../win/share/safeproc.c: Likewise.
++        * ../../src/options.c: Likewise.
++
 +2025-09-02  George Huebner  <george@feyor.sh>
 +
 +	* ../../sys/windows/GNUmakefile: Various changes to get the damn

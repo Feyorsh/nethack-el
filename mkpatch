@@ -60,8 +60,10 @@ sys/unix/Makefile.src
 sys/unix/hints/lisp
 sys/windows/GNUmakefile
 sys/windows/windmain.c
+sys/windows/windsys.c
 util/makedefs.c
 win/tty/termcap.c
+win/share/safeproc.c
 win/lisp/ChangeLog
 win/lisp/winlisp.c
 EOF
