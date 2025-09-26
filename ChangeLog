@@ -1,3 +1,33 @@
+2025-09-26  George Huebner  <george@feyor.sh>
+
+	* nethack-lisprec.el: New file.
+	(nethack-lisprec-autoplay-mode): New minor mode for automatic playback of a lisprec nethack recording.
+	(nethack-lisprec-autoplay-enabled-on): Likewise.
+	(nethack-lisprec-autoplay-enabled): Likewise.
+	(nethack-lisprec-autoplay-pause): Controls for lisprec-autoplay.
+	(nethack-lisprec-autoplay-resume): Likewise.
+	(nethack-lisprec-autoplay-toggle): Likewise.
+	(nethack-lisprec-autoplay-fast-forward-until): Automatically
+	playback a lisprec at a higher speed until a given time has
+	elapsed.
+	(nethack-lisprec-seek-to): Jump to a an absolute time in the
+	current lisprec (like fast-forward-until at maximum speed).
+        (nethack-lisprec--parse-time): Helper function for the above functions.
+        (nethack-lisprec--get-end-time): Likewise.
+        (nethack-lisprec-next-frame): Advance to the next frame in the
+	current lisprec.
+        (nethack-lisprec--start-next-frame): Helper for the above.
+        (nethack-lisprec-cancel): Cancel playback of the current lisprec.
+	(nethack-lisprec-playback): Start playback of a lisprec file.
+	(nethack-lisprec--playback-loop): Recursive helper function that
+	replays events saved in the lisprec and schedules future frames.
+	* nethack-api.el: Retrofit functions that send output to a nethack
+	process to work without one (for lisprecs).
+	* nethack.el (nethack-log): Output timestamps so lisprecs can
+	calculate the delay between frames.
+	(nethack-sentinel): Compress and save the log buffer to disk if
+	nethack-lisprec-record is enabled.
+
 2025-09-25  George Huebner  <george@feyor.sh>
 
 	* nethack.el (nethack-safe-eval-region): New function for
