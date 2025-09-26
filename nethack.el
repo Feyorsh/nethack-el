@@ -354,12 +354,49 @@ attribute, the new value, the old value, and the percent."
   "Nethack white face."
   :group 'nethack-faces)
 
-(defface nethack-map-tile-face
-  `((((type tty))
-     nil)
-    (t (:height 16)))
-  "Map face with height less than the tile size (16 pixels)."
+(defcustom nethack-mono-font-family nil
+  "Monospace font family to use for `nethack-faces'."
+  :type '(choice string (const nil))
+  :set (lambda (var val)
+         (set-default var val)
+         (when (fboundp #'nethack-faces-setup-mono-font)
+           (nethack-faces-setup-mono-font)))
   :group 'nethack-faces)
+
+
+(defun nethack-faces-find-mono-fonts ()
+  "List of monospaced fonts that probably work with Nethack."
+  (when (display-graphic-p)
+    (set-face-attribute (make-empty-face 'tmp-face) nil :fontset "fontset-nethackmono")
+    (unwind-protect
+         (seq-filter (lambda (ffamily)
+                       ;; "⌡" is used because it's not in DEC/IBM
+                       ;; but is representative of characters that are.
+                       ;; Unfortunately we cannot programmatically
+                       ;; test that box drawing characters are
+                       ;; rendered correctly---remedy is for the user
+                       ;; to set nethack-mono-font-family
+                       (set-fontset-font "fontset-nethackmono" ?⌡ (font-spec :family ffamily))
+                       (when-let ((info (font-info ffamily))
+                                  (rendered-font (font-at 0 nil #("⌡" 0 1 (face tmp-face)))))
+                         (and (string= (font-get rendered-font :family) ffamily)
+                              (string-match-p "spacing=100" (aref info 1)))))
+                     (font-family-list))
+      (unintern 'tmp-face nil))))
+
+(defun nethack-faces-setup-mono-font ()
+  "Setup `nethack-faces' to use a monospaced font.
+
+`nethack-mono-font-family' is used if not nil, otherwise search for a
+monospace Unicode font on the user's system.  This rigmarole is
+necessary to avoid DEC/IBMgraphics making lines shift over slightly."
+  (when (display-graphic-p)
+    (create-fontset-from-fontset-spec "-*-*-*-*-*-*-*-*-*-*-*-*-fontset-nethackmono")
+    (set-fontset-font "fontset-nethackmono" 'unicode (font-spec :family (or nethack-mono-font-family
+                                                                            (car (nethack-faces-find-mono-fonts)))))
+    (mapcan (lambda (f) (set-face-attribute f nil :fontset "fontset-nethackmono")) nethack-colors)))
+
+(nethack-faces-setup-mono-font)
 
 
 
@@ -773,7 +810,6 @@ delete the contents, perhaps logging the text."
   (setq-local other-window-scroll-buffer nethack-message-buffer)
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
-  (variable-pitch-mode -1)
   (setq-local cursor-in-non-selected-windows nil)
   ;; TODO still need to figure out how to automatically scroll horizontally
   (run-hooks 'nethack-map-mode-hook))
@@ -795,8 +831,6 @@ delete the contents, perhaps logging the text."
   (mapc (lambda (x) (when (buffer-live-p (cdr x))
                       (kill-buffer (cdr x))))
         nethack-menu-buffer-table))
-
-
 
 
 (run-hooks 'nethack-load-hook)
