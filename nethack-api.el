@@ -43,6 +43,7 @@
 (defvar nethack-status-buffer-format)
 (defvar nethack-message-style)
 (defvar nethack-proc)
+(defvar nethack-lisprec-record)
 (declare-function nethack-map-mode "nethack")
 (declare-function nethack-status-mode "nethack")
 (declare-function nethack-message-mode "nethack")
@@ -392,57 +393,65 @@ accessed 2021-04-23.")
                            ,glyph))))
 
 (defun nethack-nhapi-yn-function (ques choices default)
-  (let (key)
-    ;; convert string of choices to a list of ints
-    (setq choices (mapcar #'nethack-char-to-int
-                          (string-to-list choices)))
+  (if nethack-proc
+      (let (key)
+        ;; convert string of choices to a list of ints
+        (setq choices (mapcar #'nethack-char-to-int
+                              (string-to-list choices)))
 
-    (when (/= default 0)
-      (setq choices (cons default choices)))
+        (when (/= default 0)
+          (setq choices (cons default choices)))
 
-    ;; Add some special keys of our own to the choices
-    (setq choices (cons 13 choices))
+        ;; Add some special keys of our own to the choices
+        (setq choices (cons 13 choices))
 
-    (setq key (nethack-read-char (concat ques " ")))
-    (when (> (length choices) 1)
-      (while (not (member key choices))
-        (setq key (nethack-read-char (concat
-                                 (format "(bad %d) " key)
-                                 ques " ")))))
-    ;; 13, 27, and 7 are abort keys
-    (nethack-send (if (or (= 13 key)
-                     (= 27 key)
-                     (= 7 key))
-                 default
-               key))))
+        (setq key (nethack-read-char (concat ques " ")))
+        (when (> (length choices) 1)
+          (while (not (member key choices))
+            (setq key (nethack-read-char (concat
+                                          (format "(bad %d) " key)
+                                          ques " ")))))
+        ;; 13, 27, and 7 are abort keys
+        (nethack-send (if (or (= 13 key)
+                              (= 27 key)
+                              (= 7 key))
+                          default
+                        key)))
+    (message ques)))
 
 (defun nethack-nhapi-ask-direction (prompt)
   "Prompt the user for a direction."
-  (let ((cmd (lookup-key nethack-map-mode-map
-                         (nethack-read-key-sequence-vector prompt))))
-    (nethack-send
-     (cond ((eq cmd #'nethack-command-north) "n")
-           ((eq cmd #'nethack-command-south) "s")
-           ((eq cmd #'nethack-command-west) "w")
-           ((eq cmd #'nethack-command-east) "e")
-           ((eq cmd #'nethack-command-northwest) "nw")
-           ((eq cmd #'nethack-command-northeast) "ne")
-           ((eq cmd #'nethack-command-southwest) "sw")
-           ((eq cmd #'nethack-command-southeast) "se")
-           ((eq cmd #'nethack-command-up) "up")
-           ((eq cmd #'nethack-command-down) "down")
-           ((eq cmd #'nethack-command-rest-one-move) "self")
-           ((eq cmd #'nethack-command-search) "self")
-           (t "nowhere")))))
+  (if nethack-proc
+      (let ((cmd (lookup-key nethack-map-mode-map
+                             (nethack-read-key-sequence-vector prompt))))
+        (nethack-send
+         (cond ((eq cmd #'nethack-command-north) "n")
+               ((eq cmd #'nethack-command-south) "s")
+               ((eq cmd #'nethack-command-west) "w")
+               ((eq cmd #'nethack-command-east) "e")
+               ((eq cmd #'nethack-command-northwest) "nw")
+               ((eq cmd #'nethack-command-northeast) "ne")
+               ((eq cmd #'nethack-command-southwest) "sw")
+               ((eq cmd #'nethack-command-southeast) "se")
+               ((eq cmd #'nethack-command-up) "up")
+               ((eq cmd #'nethack-command-down) "down")
+               ((eq cmd #'nethack-command-rest-one-move) "self")
+               ((eq cmd #'nethack-command-search) "self")
+               (t "nowhere"))))
+    (message prompt)))
 
 (defun nethack-nhapi-askname ()
   "Prompt the user for their name."
-  (nethack-send (nethack-read-line "Who are you? ")))
+  (if nethack-proc
+      (nethack-send (nethack-read-line "Who are you? "))
+    (message "Who are you? ")))
 
 (defun nethack-nhapi-getlin (ques)
-  (nethack-send (condition-case nil
-               (nethack-read-line (concat ques " "))
-             (quit ""))))
+  (if nethack-proc
+      (nethack-send (condition-case nil
+                        (nethack-read-line (concat ques " "))
+                      (quit "")))
+    (message ques)))
 
 (defun nethack-nhapi-get-ext-cmd (cmd-alist)
   "Get an extended command from the user."
@@ -456,13 +465,15 @@ role/race/gender/align selection.")
 (defun nethack-nhapi-choose-attribute (prompt alist abort)
   "Prompts user for an element from the cars of ALIST and returns the
 corresponding cdr."
-  (nethack-send
-   (if (> (length alist) 1)
-       (let ((completion-ignore-case t))
-         (condition-case nil
-             (cdr (assoc (completing-read prompt alist nil t) alist))
-           (quit abort)))
-     (cdar alist))))
+  (if nethack-proc
+      (nethack-send
+       (if (> (length alist) 1)
+           (let ((completion-ignore-case t))
+             (condition-case nil
+                 (cdr (assoc (completing-read prompt alist nil t) alist))
+               (quit abort)))
+         (cdar alist)))
+    (message prompt)))
 
 (defvar nethack-directory nil
   "Location of the nethack directory.
@@ -978,6 +989,7 @@ the menu is dismissed."
 
 (defun nethack-nhapi-need-options-file ()
   (if (and (file-exists-p nethack-options-file)
+           (not nethack-lisprec-record)
            ;; remote nethack sessions use the shell, so the command is longer
            nethack-proc
            (= (length (process-command nethack-proc)) 1))

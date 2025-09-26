@@ -41,6 +41,7 @@
 (require 'nethack-cmd)
 (require 'nethack-keys)
 (require 'nethack-options)
+(require 'nethack-lisprec)
 (require 'url)
 (require 'dired-aux)
 
@@ -626,6 +627,7 @@ Do not download (but do untar) if NO-DOWNLOAD-P is non-nil."
 (defvar nethack-proc-kill-buffer-on-quit t
   "When the process ends kill the process buffer if this is t.")
 (defvar nethack-log-buffer "*nethack-log*")
+(defvar nethack-start-time nil)
 
 ;;;###autoload
 (defun nethack ()
@@ -701,6 +703,8 @@ where \"nethack.alt.org\" could be substituted for \"hardfought.org\".
 Assumes nethack is not already running."
   (save-excursion
     (setq nethack-proc process)
+    (setq nethack-lisprec--timer nil)
+    (setq nethack-start-time (current-time))
     (nethack-reset-status-variables)
     (set-process-filter nethack-proc #'nethack-filter)
     (set-process-sentinel nethack-proc #'nethack-sentinel)))
@@ -752,6 +756,14 @@ PROC is the process object and MSG is the exit message."
     ;;    (pop-to-buffer (current-buffer)))
 
   (delete-process proc)
+  (unless (or (not nethack-lisprec-record) (string-match-p "exited abnormally" msg))
+    (let ((save-silently)
+          (filename (format-time-string "%F.%T.lisprec"))
+          (dired-compress-file-default-suffix ".gz"))
+      (with-current-buffer nethack-log-buffer
+        (append-to-file nil nil filename))
+      (dired-compress-file filename)
+      (message "Recorded to %s.gz" filename)))
   (when nethack-proc-kill-buffer-on-quit
     (kill-buffer (get-buffer nethack-proc-buffer-name)))
   (when nethack-purge-buffers
@@ -761,11 +773,12 @@ PROC is the process object and MSG is the exit message."
       (switch-to-buffer raw-print-buffer))))
 
 (defvar nethack-log-process-text t)
-(defun nethack-log (string)
+(defun nethack-log (string &optional print-timestamp)
   (when nethack-log-process-text
     (with-current-buffer (get-buffer-create nethack-log-buffer)
       (goto-char (point-max))
-      (insert string))))
+      (when print-timestamp
+        (insert (format "%s ; %s\n" (string-trim string) (time-subtract (current-time) nethack-start-time)))))))
 
 (defvar nethack-at-prompt nil)
 (defvar nethack-at-prompt-hook nil
@@ -783,7 +796,7 @@ delete the contents, perhaps logging the text."
     (forward-line 0)
     (when (looking-at nethack-prompt-regexp)
       (let ((prompt (match-string 1)))
-        (nethack-log (buffer-substring (point-min) (point)))
+        (nethack-log (buffer-substring (point-min) (point)) t)
         (save-restriction
           (narrow-to-region (point-min) (point))
           (nethack-safe-eval-region (point-min) (point-max)))
@@ -797,21 +810,24 @@ delete the contents, perhaps logging the text."
                (run-hook-with-args 'nethack-at-prompt-hook prompt)))))))
 
 (defun nethack-send (form)
-  (let ((command (cond
-                   ((null form) "()") ; the process doesn't handle `nil'
-                   ((stringp form) form)
-                   (t (prin1-to-string form)))))
-    (with-current-buffer (process-buffer nethack-proc) (erase-buffer))
-    (process-send-string nethack-proc (concat command "\n"))
-    (nethack-log (format ";;; %s\n" command))))
+  (when nethack-proc
+    (let ((command (cond
+                     ((null form) "()") ; the process doesn't handle `nil'
+                     ((stringp form) form)
+                     (t (prin1-to-string form)))))
+      (with-current-buffer (process-buffer nethack-proc) (erase-buffer))
+      (process-send-string nethack-proc (concat command "\n"))
+      (nethack-log (format ";;; %s\n" command)))))
 
 (defun nethack-send-and-wait (form)
-  (nethack-send form)
-  ;; wait until we get back to a "command" prompt before returning
-  (setq nethack-at-prompt nil)
-  (while (and (member (process-status nethack-proc) '(open run))
-              (not nethack-at-prompt))
-    (accept-process-output nethack-proc)))
+  (when nethack-proc
+    (nethack-send form)
+    ;; wait until we get back to a "command" prompt before returning
+    (setq nethack-at-prompt nil)
+    (while (and (member (process-status nethack-proc) '(open run))
+                (not nethack-at-prompt))
+      (accept-process-output nethack-proc))))
+
 (defun nethack-restore-windows ()
   "Restore NetHack window layout."
   (interactive)
