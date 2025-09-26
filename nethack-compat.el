@@ -156,7 +156,8 @@ Return the modified alist."
     (nethack-char-to-int char)))
 
 (defun nethack-read-char (&optional prompt)
-  (let ((cursor-in-echo-area t))
+  (let ((cursor-in-echo-area t)
+        (x-stretch-cursor))
     (message prompt)
     (let ((char (read-char-exclusive)))
       (message "")
