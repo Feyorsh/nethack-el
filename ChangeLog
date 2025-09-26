@@ -1,5 +1,15 @@
 2025-09-25  George Huebner  <george@feyor.sh>
 
+	* nethack.el (nethack-map-mode): Ensure all characters in the map
+	buffer are monospaced.
+	(nethack-faces-setup-mono-font): New helper for the above that
+	sets the fontset of all nethack-faces to use a monocode font.
+	(nethack-faces-find-mono-fonts): New function for finding
+	monospaced fonts that can also display unicode characters found in
+	DEC/IBMGraphics.
+
+2025-09-25  George Huebner  <george@feyor.sh>
+
 	* nethack.el (nethack-restore-windows): New interactive function
 	exposing `nethack-nhapi-restore-window-configuration` for easily
 	fixing disruptions to the window layout.
