@@ -666,7 +666,11 @@ The TYPE argument is legacy and serves no real purpose."
 (defun nethack-nhapi-destroy-menu (menuid)
   (save-current-buffer
     (let ((buffer (nethack-menu-buffer menuid)))
-      (delete-windows-on buffer nil)
+      (if (and (= menuid 3) (nethack-options-set-p "perm_invent"))
+          (delete-windows-on buffer nil) ;; end of game, delete inventory window
+        (when-let ((map-window (and nethack-map-buffer
+                                    (get-buffer-window nethack-map-buffer))))
+          (select-window map-window)))
       (kill-buffer buffer)
       (setq nethack-menu-buffer-table
             (nethack-assq-delete-all menuid nethack-menu-buffer-table)))))
@@ -849,34 +853,29 @@ the menu is dismissed."
         (progn
           (setq nethack-inventory-need-update nil)
           (nethack-send nil))
-        (progn
-          (unless nethack-active-menu-buffer
-            (setq nethack-window-configuration (current-window-configuration)))
-          (if (one-window-p)
+      (progn
+        (unless nethack-active-menu-buffer
+          (setq nethack-window-configuration (current-window-configuration)))
+        (if (one-window-p)
             (switch-to-buffer buffer)
-            ;; Use the window displaying the message buffer for the menu
-            ;; buffer, if possible.
-            (let ((message-window (and nethack-message-buffer
-                                       (get-buffer-window nethack-message-buffer)))
-                  (inventory-window (and nethack-inventory-buffer
-                                         (get-buffer-window nethack-inventory-buffer))))
-              (if (or (and inventory-window (equal buffer nethack-inventory-buffer))
-                      (not message-window))
-                  (switch-to-buffer-other-window (nethack-menu-buffer menuid) t)
-                ;; this codepath basically means the window displaying perm_invent will be chosen to display stuff,
-                ;; *except* at game over, when it will be display in the window that usually displays the game map.
-                ;; yes, this is a stupid way of doing it.
-                (select-window message-window)
-                (switch-to-buffer-other-window (nethack-menu-buffer menuid) t)))
-            ;; make window larger, if necessary
-            (let ((bh (nethack-window-buffer-height (selected-window)))
-                  (wh (- (window-height) 1)))
-              (when (> bh wh)
-                (enlarge-window (- bh wh)))))
-          (nethack-menu-mode how)
-          (goto-char (point-min))
-          (message "Displaying menu")
-          (setq nethack-active-menu-buffer buffer)))))
+          ;; Use the window displaying the message buffer for the menu
+          (if-let ((window (or (and nethack-inventory-buffer
+                                    (get-buffer-window nethack-inventory-buffer))
+                               (and nethack-message-buffer
+                                    (get-buffer-window nethack-message-buffer)))))
+              (progn
+                (select-window window t)
+                (switch-to-buffer buffer t t))
+            (switch-to-buffer-other-window buffer t))
+          ;; make window larger, if necessary
+          (let ((bh (nethack-window-buffer-height (selected-window)))
+                (wh (- (window-height) 1)))
+            (when (> bh wh)
+              (enlarge-window (- bh wh)))))
+        (nethack-menu-mode how)
+        (goto-char (point-min))
+        (message "Displaying menu")
+        (setq nethack-active-menu-buffer buffer)))))
 
 (defun nethack-nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
