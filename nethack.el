@@ -774,6 +774,7 @@ delete the contents, perhaps logging the text."
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
   (variable-pitch-mode -1)
+  (setq-local cursor-in-non-selected-windows nil)
   ;; TODO still need to figure out how to automatically scroll horizontally
   (run-hooks 'nethack-map-mode-hook))
 
