@@ -709,12 +709,44 @@ Assumes nethack is not already running."
 (defconst nethack-prompt-regexp
   "^\\(command\\|menu\\|dummy\\|direction\\|number\\|string\\)> *")
 
+(define-error 'nethack-illegal-function "Illegal output from nethack process detected")
+(defun nethack-safe-eval-region (start end)
+  "Evaluate region, only allowing nethack-nhapi-* functions.
+
+This is not totally foolproof, but it serves as a first line of
+defense against malicious input."
+  (let ((current-buf (current-buffer))
+        (nhapi-file (locate-library "nethack-api"))
+        (sexps nil)
+        (start-pos 0))
+    (with-temp-buffer
+      (emacs-lisp-mode)
+      (insert-buffer-substring-no-properties current-buf start end)
+      (catch 'done
+        (while t
+          (let* ((parse-sexp-ignore-comments t)
+                 (sexp-end (scan-sexps start-pos 1))
+                 (sexp-start (when sexp-end (scan-sexps sexp-end -1))))
+            (when (or (null sexp-end) (>= sexp-end (point-max)))
+              (throw 'done nil))
+            (setq sexps (cons (buffer-substring sexp-start sexp-end) sexps))
+            (setq start-pos sexp-end)))))
+    (mapc (lambda (s)
+              ;; ensure every function is defined in nethack-api.el, failing shut on errors
+              (unless (ignore-errors
+                        (let ((func (ignore-error end-of-file (caar (read-from-string s)))))
+                          (or (null func) (string= (symbol-file func) nhapi-file))))
+                ;; do not terminate process in case this is a false positive
+                (signal 'nethack-illegal-function s)))
+            sexps)
+    (eval-region start end)))
+
 (defun nethack-sentinel (proc msg)
   "Nethack background process sentinel.
 PROC is the process object and MSG is the exit message."
   (with-current-buffer (process-buffer proc)
     (nethack-log (buffer-substring (point-min) (point)))
-    (eval-region (point-min) (point-max))
+    (nethack-safe-eval-region (point-min) (point-max))
     (insert "Nethack " msg))
     ;; (when (not (string-equal msg "Nethack finished"))
     ;;    (pop-to-buffer (current-buffer)))
@@ -754,7 +786,7 @@ delete the contents, perhaps logging the text."
         (nethack-log (buffer-substring (point-min) (point)))
         (save-restriction
           (narrow-to-region (point-min) (point))
-          (eval-buffer))
+          (nethack-safe-eval-region (point-min) (point-max)))
         (cond ((or (equal prompt "command")
                    (equal prompt "menu")
                    (equal prompt "dummy"))

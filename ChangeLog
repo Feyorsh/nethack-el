@@ -1,5 +1,15 @@
 2025-09-25  George Huebner  <george@feyor.sh>
 
+	* nethack.el (nethack-safe-eval-region): New function for
+	sandboxing `eval-region` to only use functions defined in
+	nethack-api.el. This are definitely ways to get around this, but
+	they would generally require loading arbitrary elisp files, at
+	which point I think it's safe to say nethack-el is not the weak
+	link in the security model (this is mainly to protect from output
+	from a malicious nethack executable).
+
+2025-09-25  George Huebner  <george@feyor.sh>
+
 	* nethack.el (nethack-map-mode): Ensure all characters in the map
 	buffer are monospaced.
 	(nethack-faces-setup-mono-font): New helper for the above that
