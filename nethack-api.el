@@ -888,6 +888,13 @@ the menu is dismissed."
         (message "Displaying menu")
         (setq nethack-active-menu-buffer buffer)))))
 
+(defmacro nethack-nhapi--let*-if (condition then-bindings else-bindings &rest body)
+  `(if ,condition
+       (let* ,then-bindings
+         ,@body)
+     (let* ,else-bindings
+       ,@body)))
+
 (defun nethack-nhapi-restore-window-configuration ()
   "Layout the nethack windows according to the values
 `nethack-status-window-height' and `nethack-message-window-height'."
@@ -897,36 +904,42 @@ the menu is dismissed."
   (set-window-dedicated-p (selected-window) nil)
   (delete-other-windows)
 
-  (let* ((w-left (selected-window))
-         (w-right (split-window-horizontally (floor (* 0.6 (window-width)))))
-         (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
-         (w-inventory (when (nethack-options-set-p "perm_invent") (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height)))))))
-         (w-map w-left)
-         (w-message w-right))
+  (nethack-nhapi--let*-if (and nethack-use-tiles (display-graphic-p))
+                          ((_ (selected-window)) ; layout similar to x11 port
+                           (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
+                           (w-map (split-window-vertically (floor (* 0.55 (window-body-height)))))
+                           (w-message (selected-window))
+                           (w-inventory (when (nethack-options-set-p "perm_invent") (progn (split-window-horizontally (floor (* 0.6 (window-body-width))))))))
+                          ((w-left (selected-window)) ; layout similar to curses port
+                           (w-right (split-window-horizontally (floor (* 0.6 (window-width)))))
+                           (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
+                           (w-inventory (when (nethack-options-set-p "perm_invent") (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height)))))))
+                           (w-map w-left)
+                           (w-message w-right))
 
-    ;; By nethack 3.6.6, the nethack-nhapi-create-map-window and
-    ;; nethack-nhapi-create-inventory-window are called after
-    ;; nethack-nhapi-restore-window-configuration. This may be an issue within the source
-    ;; and it may be possible to patch it there, but patching it here is easier.
-    (nethack-nhapi-create-map-window)             ; We don't need an if, since these already have a check for duplicates.
+                          ;; By nethack 3.6.6, the nethack-nhapi-create-map-window and
+                          ;; nethack-nhapi-create-inventory-window are called after
+                          ;; nethack-nhapi-restore-window-configuration. This may be an issue within the source
+                          ;; and it may be possible to patch it there, but patching it here is easier.
+                          (nethack-nhapi-create-map-window)             ; We don't need an if, since these already have a check for duplicates.
 
-    (when (nethack-options-set-p "perm_invent")
-      (nethack-nhapi-create-inventory-window 3)
-      (set-window-buffer w-inventory nethack-inventory-buffer)
-      (set-window-dedicated-p w-inventory nil))
+                          (when (nethack-options-set-p "perm_invent")
+                            (nethack-nhapi-create-inventory-window 3)
+                            (set-window-buffer w-inventory nethack-inventory-buffer)
+                            (set-window-dedicated-p w-inventory nil))
 
-    (set-window-buffer w-map nethack-map-buffer)
-    (set-window-dedicated-p w-map nil)
-    (set-window-buffer w-message nethack-message-buffer)
-    (set-window-dedicated-p w-message nil)
-    (set-window-buffer w-status nethack-status-buffer)
-    (set-window-dedicated-p w-status t)
-    (window-preserve-size w-status nil t)
+                          (set-window-buffer w-map nethack-map-buffer)
+                          (set-window-dedicated-p w-map nil)
+                          (set-window-buffer w-message nethack-message-buffer)
+                          (set-window-dedicated-p w-message nil)
+                          (set-window-buffer w-status nethack-status-buffer)
+                          (set-window-dedicated-p w-status t)
+                          (window-preserve-size w-status nil t)
 
-    (with-current-buffer nethack-status-buffer
-      (setq mode-line-format nil))
+                          (with-current-buffer nethack-status-buffer
+                            (setq mode-line-format nil))
 
-    (select-window w-map)))
+                          (select-window w-map)))
 
 
 (defun nethack-nhapi-bell ()
