@@ -42,8 +42,11 @@
 (require 'nethack-keys)
 (require 'nethack-options)
 (require 'nethack-lisprec)
+(require 'nethack-gen-tiles)
+
 (require 'url)
 (require 'dired-aux)
+(require 'face-remap)
 
 (defgroup nethack nil
   "Emacs Lisp frontend to the lisp window port of Nethack."
@@ -105,6 +108,14 @@ Valid values are :map, :header-line, :mode-line, or t."
   :group 'nethack)
 
 ;;; Insert variables that control how the status gets displayed here.
+
+(defcustom nethack-use-tiles nil
+  "Name of XPM tileset to use when drawing the map and inventory."
+  :type '(choice string (const nil))
+  :options '("nethack" "slashem")
+  :set (lambda (var val)
+         (set-default var (if (eq val t) "nethack" val)))
+  :group 'nethack)
 
 (defcustom nethack-map-mode-hook nil
   "Functions to be called after setting up the Nethack map."
@@ -514,7 +525,8 @@ Returns the buffer of the compilation process."
     (nethack-build-untar)
     (nethack-build-patch)
     (nethack-build-setup)
-    (nethack-build-compile)))
+    (nethack-build-compile)
+    (nethack-build-tiles)))
 
 (defun nethack-build-download ()
   "Download the nethack source from nethack.org.
@@ -589,6 +601,10 @@ the ncurses-dev library for your system."
       (with-current-buffer compilation-buffer
         (setq-local compilation-error-regexp-alist nil)
         (current-buffer)))))
+
+(defun nethack-build-tiles ()
+  "Compile nethack-tiles.el.gz from the XPMs in the nethack directory."
+  (nethack-gen-tiles default-directory "nethack"))
 
 
 ;;; Initialization
@@ -708,6 +724,21 @@ Assumes nethack is not already running."
     (nethack-reset-status-variables)
     (set-process-filter nethack-proc #'nethack-filter)
     (set-process-sentinel nethack-proc #'nethack-sentinel)))
+
+(defvar nethack-use-tiles--tileset nil)
+(defvar nethack-use-tiles--font-height nil)
+(defun nethack-toggle-tiles ()
+  "Toggle the use of tiles on the map."
+  (interactive)
+  (if nethack-use-tiles
+      (progn
+        (setq nethack-use-tiles--tileset nethack-use-tiles)
+        (with-current-buffer nethack-map-buffer
+          (face-remap-remove-relative nethack-use-tiles--font-height))
+        (setq nethack-use-tiles nil))
+    (setq nethack-use-tiles (or nethack-use-tiles--tileset (concat "nethack" (nethack-version-nodots))))
+    (with-current-buffer nethack-map-buffer (nethack-map-mode)))
+  (nethack-command-redraw-screen 2))
 
 ;;;; Process code to communicate with the Nethack executable
 (defconst nethack-prompt-regexp
@@ -859,7 +890,12 @@ delete the contents, perhaps logging the text."
   (setq-local scroll-conservatively 0)  ; recenter
   (setq-local scroll-margin 3)
   (setq-local cursor-in-non-selected-windows nil)
-  ;; TODO still need to figure out how to automatically scroll horizontally
+  (when (and nethack-use-tiles (display-graphic-p))
+    (let ((cookie (face-remap-add-relative 'default :height 16)))
+      (setq nethack-use-tiles--font-height (or nethack-use-tiles--font-height cookie)))
+    ;; for not clobbering our keybindings, and preventing the user
+    ;; from accidentally messing up the map tiles
+    (setq-local image-map (make-sparse-keymap)))
   (run-hooks 'nethack-map-mode-hook))
 
 (define-derived-mode nethack-message-mode text-mode "NetHack Messages"
