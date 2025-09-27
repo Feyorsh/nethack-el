@@ -1,5 +1,12 @@
 2025-09-27  George Huebner  <george@feyor.sh>
 
+	* nethack-api.el (nethack-nhapi-restore-window-configuration): Use
+	an X11-like horizontal window layout when `nethack-use-tiles` to
+	show the entire map at once and to reduce scrolling of the map
+	buffer.
+
+2025-09-27  George Huebner  <george@feyor.sh>
+
 	* nethack-gen-tiles.el: New file based on gen-tiles.lisp.
 	(nethack-gen-tiles): New function for interactive or batch
 	converting of nethack tiles (an XPM-like format) to a sexp that
