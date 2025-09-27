@@ -47,6 +47,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
  #ifndef DEFAULT_WINDOW_SYS
  #define DEFAULT_WINDOW_SYS "shim"
+
+--- NetHack-NetHack-3.7.0_WIP/include/global.h	2025-09-26 13:04:41.965490430 -0500
++++ nethack/include/global.h	2025-09-26 18:03:32.392235672 -0500
+@@ -257,7 +257,7 @@
+ #endif
+ 
+ #if defined(X11_GRAPHICS) || defined(QT_GRAPHICS) || defined(GNOME_GRAPHICS) \
+-    || defined(MSWIN_GRAPHICS)
++    || defined(MSWIN_GRAPHICS) || defined(LISP_GRAPHICS)
+ #ifndef NO_TILE_C
+ #ifndef TILES_IN_GLYPHMAP
+ #define TILES_IN_GLYPHMAP
 --- NetHack-NetHack-3.7.0_WIP/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
 +++ nethack/include/patchlevel.h	2025-08-24 10:32:05.576673554 -0500
 @@ -19,6 +19,8 @@
@@ -276,8 +288,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #	$(TARGETPFX)tile.o
  #
 +# Files for the lisp port
-+WINLISPSRC = ../win/lisp/winlisp.c tile.c
-+WINLISPOBJ = winlisp.o tile.o
++WINLISPSRC = ../win/lisp/winlisp.c
++WINLISPOBJ = winlisp.o
  #
 -#WINSRC = $(WINTTYSRC)
 -#WINOBJ = $(WINTTYOBJ)
@@ -327,7 +339,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  # see make depend above
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/sys/unix/hints/lisp	2025-08-24 15:06:10.501580150 -0500
-@@ -0,0 +1,405 @@
+@@ -0,0 +1,407 @@
 +# NetHack 3.7  unix-lisp.370 $NHDT-Date: 1693519390 2025/08/19 18:30:00 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.61 $
 +# Copyright (c) Kenneth Lorber, Kensington, Maryland, 2007.
 +# NetHack may be freely redistributed.  See license for details.
@@ -539,6 +551,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +WINSRC += $(WINLISPSRC)
 +WINOBJ0 += $(WINLISPOBJ)
 +WINLIB += $(WINLISPLIB)
++XTRASRC += tile.c
++XTRAOBJ += $(TARGETPFX)tile.o
 +
 +ifeq "$(CCISCLANG)" "1"
 +# clang-specific starts
@@ -804,14 +818,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  	   pager pickup pline polyself potion pray priest quest questpgr \
  	   random read rect region report restore rip rnd role rumors \
  	   safeproc save sfbase sfstruct shk shknam sit selvar sounds sp_lev \
-@@ -1327,13 +1329,13 @@
+@@ -1327,19 +1329,20 @@
  #==========================================
  # nethack
  #==========================================
 -CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
 -CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DWIN32CON $(SOUNDLIBDEFS)
-+CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DNO_TILE_C -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
-+CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DNO_TILE_C -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CFLAGSNH = $(CFLAGSU) $(CFLAGSXTRA) $(SOUNDLIBINCL) -DTILES -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
++CPPFLAGSNH = $(CFLAGSU) $(CPPFLAGSXTRA) -DTILES -DSAFEPROCS -D_LIB -DNOTTYGRAPHICS -DLISP_GRAPHICS -DWIN32CON $(SOUNDLIBDEFS)
  
  ONH = $(O)nethack
  
@@ -822,7 +836,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  NHCURSESFLAGS = -DCURSES_GRAPHICS -DCURSES_UNICODE $(PDCURSESFLAGS) -DPDC_NCMOUSE
  CFLAGSNH += $(NHCURSESFLAGS)
  NHONLY += $(addsuffix .o, cursdial cursinit cursinvt cursmain cursmesg cursmisc cursstat curswins)
-@@ -1420,6 +1422,9 @@
+ endif
+ 
+ DATE_O  = $(addsuffix .o, $(addprefix $(ONH)/, date))
++TILE_O  = $(addsuffix .o, $(addprefix $(ONH)/, tile))
+ 
+ NHOBJS = $(addprefix $(ONH)/, $(COREOBJS) $(NHONLY))
+ NHRES = $(ONH)/conres.o
+@@ -1347,11 +1350,11 @@
+ 
+ nethack: $(NHTARGET)
+ 
+-$(GAMEDIR)/NetHack.exe: $(NHOBJS) $(NHRES) $(DATE_O) $(LUALIB) $(PDCLIB) $(HLHACKLIB) \
++$(GAMEDIR)/NetHack.exe: $(NHOBJS) $(NHRES) $(DATE_O) $(TILE_O) $(LUALIB) $(PDCLIB) $(HLHACKLIB) \
+ 	$(SOUNDLIBLIBS) | $(GAMEDIR)
+ 	$(ld) $(LDFLAGS) -mconsole $^ $(HLHACKLIB) $(LIBS) -static -lstdc++ -o$@
+ 
+-$(ONH)/%.o: $(SRC)/%.c $(NHLUAH) | $(ONH)
++$(ONH)/%.o: $(SRC)/%.c $(NHLUAH) | $(ONH) tilemap
+ 	$(cc) $(CFLAGSNH) $< -o$@
+ 
+ #==========================================
+@@ -1420,6 +1423,9 @@
  $(ONH)/%.o: $(TTY)/%.c $(NHLUAH) | $(ONH)
  	$(cc) $(CFLAGSNH) $< -o$@
  
@@ -1016,7 +1051,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,571 @@
+@@ -0,0 +1,583 @@
++2025-09-26  George Huebner  <george@feyor.sh>
++
++	* ../../sys/unix/hints/lisp: Add tile.c the intended way.
++	* ../../sys/windows/GNUmakefile: Add tile.c to build.
++	* ../../include/global.h: Define TILES_IN_GLYPHMAP, required for
++	glyph_info.tileidx to work
++	* winlisp.c (lisp_procs): Add WC_ASCII_MAP and WC_TILED_MAP
++	capabilities. These probably will never do anything because usage
++	of tiles is entirely determined by the client, but good to have
++	anyway.
++	(lisp_add_menu): Inform client not to display a tile if NO_GLYPH.
++
 +2025-09-22  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Query the client to check if they
@@ -1841,7 +1888,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +struct window_procs lisp_procs = {
 +    WPID(lisp),
 +    (WC_ALIGN_MESSAGE | WC_ALIGN_STATUS | WC_COLOR | WC_INVERSE
-+      | WC_HILITE_PET | WC_WINDOWCOLORS
++      | WC_HILITE_PET | WC_WINDOWCOLORS | WC_ASCII_MAP | WC_TILED_MAP
 +      | WC_PERM_INVENT | WC_POPUP_DIALOG | WC_SPLASH_SCREEN),
 +    (WC2_DARKGRAY | WC2_HITPOINTBAR
 +#ifdef CURSES_UNICODE
@@ -2655,8 +2702,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +  lisp_cmd ("add-menu",
 +	    lisp_int (window);
-+	    lisp_int (glyphinfo->glyph);
-+	    lisp_int (glyphinfo->gm.tileidx); // UNUSED
++	    lisp_int (glyphinfo->glyph); // UNUSED
++	    lisp_int ((glyphinfo->glyph == NO_GLYPH) ? -1 : glyphinfo->gm.tileidx);
 +	    lisp_int (ch);
 +	    lisp_int (gch);
 +	    lisp_literal (attr_to_string (attr));

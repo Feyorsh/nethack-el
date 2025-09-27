@@ -45,6 +45,7 @@ EOF
 # generate the diffs
 for n in `cat <<EOF
 include/config.h
+include/global.h
 include/patchlevel.h
 include/tradstdc.h
 include/winlisp.h

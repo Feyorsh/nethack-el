@@ -330,7 +330,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
 --- /dev/null	2025-03-31 01:41:49.285570000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-03-31 01:40:08.895891095 -0500
-@@ -0,0 +1,545 @@
+@@ -0,0 +1,550 @@
++2025-09-26  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_add_menu): Inform client not to display a tile
++	if NO_GLYPH.
++
 +2025-09-22  George Huebner  <george@feyor.sh>
 +
 +	* winlisp.c (lisp_display_file): Query the client to check if they
@@ -1962,7 +1967,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +  lisp_cmd ("add-menu",
 +	    lisp_int (window);
 +	    lisp_int (glyph);
-+	    lisp_int (glyph2tile[glyph]);
++	    lisp_int ((glyph == NO_GLYPH) ? -1 : glyph2tile[glyph]);
 +	    lisp_int (ch);
 +	    lisp_int (gch);
 +	    lisp_literal (attr_to_string (attr));
