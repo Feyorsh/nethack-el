@@ -42,6 +42,8 @@
 (defvar nethack-status-mode-line-format)
 (defvar nethack-status-buffer-format)
 (defvar nethack-message-style)
+(defvar nethack-use-tiles)
+(defvar nethack-tile-vector)
 (defvar nethack-proc)
 (defvar nethack-lisprec-record)
 (declare-function nethack-map-mode "nethack")
@@ -365,32 +367,38 @@ Values taken from
 http://fileformats.archiveteam.org/wiki/DEC_Special_Graphics_Character_Set,
 accessed 2021-04-23.")
 
-(defun nethack-nhapi-print-glyph (x y color glyph _tile ch &optional attr)
+(defun nethack-nhapi-print-glyph (x y color glyph tile ch &optional attr)
   "Insert glyph into `nethack-map-buffer'."
   (set-buffer nethack-map-buffer)
   (setq x (- x 1))                      ; FIXME: put this hack in C
   (let ((inhibit-read-only t))
-    (cond
-      ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (or (nethack-options-set-p 'symset) "")))
-       (nethack-gamegrid-set-cell
-        x y
-        ;; For DECgraphics, lower-case letters with high bit set mean switch
-        ;; character set and render with high bit clear; user might want 8-bits
-        ;; for other characters
-        (if (< (logand ch #x7f) #x60)
-            ch
-          (or (cdr (assq (logxor ch #x80)
-                         nethack-dec-graphics-char))
-              ch))))
-      ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (or (nethack-options-set-p 'symset) "")))
-       (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
-      (t (nethack-gamegrid-set-cell x y ch)))
-    (set-text-properties (gamegrid-cell-offset x y)
-                         (1+ (gamegrid-cell-offset x y))
-                         `(face
-                           ,(list (aref nethack-colors color) (nethack-attr-face attr))
-                           glyph
-                           ,glyph))))
+    (if (and nethack-use-tiles (display-images-p))
+        (save-excursion
+          (let ((buffer-read-only nil))
+            (goto-char (gamegrid-cell-offset x y))
+            (delete-char 1)
+            (insert-image (elt nethack-tile-vector tile))))
+      (cond
+        ((or (nethack-options-set-p 'DECgraphics) (string-match-p "^DECgraphics$" (or (nethack-options-set-p 'symset) "")))
+         (nethack-gamegrid-set-cell
+          x y
+          ;; For DECgraphics, lower-case letters with high bit set mean switch
+          ;; character set and render with high bit clear; user might want 8-bits
+          ;; for other characters
+          (if (< (logand ch #x7f) #x60)
+              ch
+            (or (cdr (assq (logxor ch #x80)
+                           nethack-dec-graphics-char))
+                ch))))
+        ((or (nethack-options-set-p 'IBMgraphics) (string-match-p "^IBMgraphics\\(?:_1\\|_2\\)?$" (or (nethack-options-set-p 'symset) "")))
+         (nethack-gamegrid-set-cell x y (decode-char 'cp437 ch)))
+        (t (nethack-gamegrid-set-cell x y ch)))
+      (set-text-properties (gamegrid-cell-offset x y)
+                           (1+ (gamegrid-cell-offset x y))
+                           `(face
+                             ,(list (aref nethack-colors color) (nethack-attr-face attr))
+                             glyph
+                             ,glyph)))))
 
 (defun nethack-nhapi-yn-function (ques choices default)
   (if nethack-proc
@@ -544,9 +552,10 @@ Do not edit the value of this variable.  Instead, change the value of
 (defun nethack-nhapi-update-positionbar (_features))
 
 (defun nethack-nhapi-init-nhwindows (executable &rest _args)
-  "This is the first function sent by the nethack process.  Does
-all of the appropriate setup."
+  "Function called by the nethack process for windowing setup."
   (setq nethack-directory (file-name-directory executable))
+  (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
+    (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
   ;; clean up old buffers
   (mapc (lambda (b) (kill-buffer (cdr b))) nethack-menu-buffer-table)
   (setq nethack-menu-buffer-table nil)
@@ -629,12 +638,14 @@ The TYPE argument is legacy and serves no real purpose."
   (nethack-clear-message))
 
 (defconst nethack-map-width 79 "Max width of the map.")
-(defconst nethack-map-height 22 "Max height of the map.")
+(defconst nethack-map-height 21 "Max height of the map.")
 (defun nethack-nhapi-clear-map ()
   "Clear the map."
   (with-current-buffer nethack-map-buffer
     (let ((inhibit-read-only t))
       (erase-buffer)
+      (when (and nethack-use-tiles (display-images-p))
+        (require (intern (concat nethack-use-tiles "-tiles"))))
       (setq gamegrid-use-glyphs nil)  ; dont try to use gamegrid glyphs
       (let (cursor-type)              ; protect from gamegrid-init clobbering
         (gamegrid-init (make-vector 256 nil)))
@@ -811,7 +822,7 @@ by `nethack-unassigned-accelerator-index'."
     (setq nethack-unassigned-accelerator-index
           (+ 1 nethack-unassigned-accelerator-index))))
 
-(defun nethack-nhapi-add-menu (menuid _glyph _tile accelerator _groupacc attr str preselected)
+(defun nethack-nhapi-add-menu (menuid _glyph tile accelerator _groupacc attr str preselected)
   "Create a menu item out of arguments and draw it in the menu
 buffer."
   (with-current-buffer (nethack-menu-buffer menuid)
@@ -820,12 +831,14 @@ buffer."
           (start (point)))
       (if (= accelerator -1)
           (insert str)
-        (insert (format "%c %c %s"
-                        (if (eq accelerator 0)
-                            (nethack-specify-accelerator)
-                          accelerator)
-                        (if preselected ?+ ?-)
-                        str)))
+        (insert (format "%c %c " (if (eq accelerator 0)
+                                     (nethack-specify-accelerator)
+                                   accelerator)
+                        (if preselected ?+ ?-)))
+        (when (and (not (= -1 tile)) nethack-use-tiles (display-graphic-p))
+          (insert-image (elt nethack-tile-vector tile))
+          (insert " "))
+        (insert str))
       (put-text-property start (point) 'face (nethack-attr-face attr))
       (insert-char ?\n 1 nil)
       (when (nethack-options-set-p 'menucolors)

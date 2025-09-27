@@ -1,3 +1,20 @@
+2025-09-27  George Huebner  <george@feyor.sh>
+
+	* nethack-gen-tiles.el: New file based on gen-tiles.lisp.
+	(nethack-gen-tiles): New function for interactive or batch
+	converting of nethack tiles (an XPM-like format) to a sexp that
+	provides a vector of images in elisp.
+	* nethack-tiles.el.gz: Artifact from running the above script on
+	vanilla NetHack 3.7 that ships with nethack-el.
+	* nethack.el (nethack-map-mode): Use face-remap-add-relative
+	instead of a separate face for tiles.
+	(nethack-use-tiles): Reintroduce.
+	(nethack-toggle-tiles): Likewise.
+	(nethack-nhapi-print-glyph): Reintroduce insertion of tiles.
+	(nethack-nhapi-clear-map): Likewise.
+	(nethack-nhapi-add-menu): Add insertion of tiles.
+	(nethack-map-height): Change to correct value of 21.
+
 2025-09-26  George Huebner  <george@feyor.sh>
 
 	* nethack-lisprec.el: New file.
