@@ -9,8 +9,6 @@ extensible, role-playing environment in the world!
 
 All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-clause BSD.
 
-![](./images/screenshot.png)
-
 ## Features
 
 * Customizable keys
@@ -19,6 +17,19 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 * Event hooks
 * Record and playback sessions (ttyrec)
 * All the beauty that comes with Emacs
+
+## Gallery
+
+![](./images/graphical-367.png)
+*Nethack 3.6.7 in graphical Emacs with DECGraphics*
+
+<!-- generated with gif-screencast then `gifsicle --crop ... --scale ... --lossy 80 --colors 64 -O3 '#0-49'` -->
+![](./images/terminal-37.gif)
+*Nethack 3.7 in `emacs -nw` with IBMGraphics ([lisprec](Lisprec) playback)*
+
+<!-- generated with asciinema then `agg in.cast --font-family "JetBrainsMono Nerd Font Mono" out.gif` -->
+![](./images/tiles-37.gif)
+*Nethack 3.7 in graphical Emacs with `(setq nethack-use-tiles "nethack")`*
 
 ## Project Status
 I am semi-actively adding new features and fixing bugs as of September 2025.
