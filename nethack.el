@@ -598,9 +598,9 @@ the ncurses-dev library for your system."
 
 (defun nethack-build-tiles ()
   "Compile nethack-tiles.el.gz from the XPMs in the nethack directory."
-  (let ((source-directory default-directory)
+  (let ((nethack-source-directory default-directory)
         (default-directory (file-name-directory (directory-file-name default-directory))))
-    (nethack-gen-tiles default-directory "nethack")))
+    (nethack-gen-tiles nethack-source-directory "nethack")))
 
 
 ;;; Initialization
