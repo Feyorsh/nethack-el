@@ -43,6 +43,7 @@
 (defvar nethack-status-buffer-format)
 (defvar nethack-message-style)
 (defvar nethack-use-tiles)
+(defvar nethack-version)
 (defvar nethack-tile-vector)
 (defvar nethack-proc)
 (defvar nethack-lisprec-record)
@@ -551,8 +552,9 @@ Do not edit the value of this variable.  Instead, change the value of
 
 (defun nethack-nhapi-update-positionbar (_features))
 
-(defun nethack-nhapi-init-nhwindows (executable &rest _args)
+(defun nethack-nhapi-init-nhwindows (version executable &rest _args)
   "Function called by the nethack process for windowing setup."
+  (setq nethack-version (string-trim-right version "-[0-9]*"))
   (setq nethack-directory (file-name-directory executable))
   (when (and (nethack-options-set-p 'tiled_map) (null nethack-use-tiles))
     (message "You have OPTIONS=tiled_map set in your nethackrc; consider setting nethack-use-tiles"))
