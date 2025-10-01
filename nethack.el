@@ -517,20 +517,19 @@ Returns the buffer of the compilation process."
     (setq-default nethack-program
                   (expand-file-name "nethack" nethack-build-directory)))
   (delete-directory nethack-build-directory t)
-  (let* ((default-directory (file-name-directory (directory-file-name nethack-build-directory)))
-         (source-directory (expand-file-name "build" default-directory)))
+  (let ((default-directory (file-name-directory (directory-file-name nethack-build-directory))))
     (unless no-download-p (nethack-build-download))
     (nethack-build-untar)
-    (nethack-build-patch)
-    (nethack-build-setup)
-    (nethack-build-compile)
-    (nethack-build-tiles)))
+    (let ((default-directory (expand-file-name "build" default-directory)))
+      (nethack-build-patch)
+      (nethack-build-setup)
+      (nethack-build-tiles)
+      (nethack-build-compile))))
 
 (defun nethack-build-download ()
   "Download the nethack source from nethack.org.
 The source is saved as nethack.tar.gz within the
 `default-directory'."
-  (message "a")
   (let ((download-url (concat "https://github.com/NetHack/NetHack/archive/NetHack-"
                               (pcase nethack-version
                                 ("3.6.7" "3.6.7_Released")
@@ -549,20 +548,19 @@ The source is saved as nethack.tar.gz within the
 
 (defun nethack-build-patch ()
   "Patch the NetHack source with lisp patches."
-  ;; cd build && patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
-  (let ((default-directory source-directory))
-    (process-file-shell-command
-     "patch -Nr- -p1"
-     (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))))
+  ;; patch -Nr- -p1 < ../../enh-$(NH_VER_NODOTS).patch || true
+  (process-file-shell-command
+   "patch -Nr- -p1"
+   (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch")))
 
 (defun nethack-build-setup ()
   "Run any pre-build setup before building NetHack."
-  ;; cd build/sys/unix && $(SHELL) ./setup.sh hints/linux-lisp
+  ;; cd sys/unix && $(SHELL) ./setup.sh hints/linux-lisp
   ;; or on windows,
-  ;; cd build && cp sys/windows/GNUmakefile* src/
+  ;; cp sys/windows/GNUmakefile* src/
   (pcase system-type
-    ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f)) source-directory))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*" source-directory))))
-    (_ (let ((default-directory (expand-file-name "sys/unix" source-directory)))
+    ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f))))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*"))))
+    (_ (let ((default-directory (expand-file-name "sys/unix")))
          (process-file-shell-command "./setup.sh hints/lisp")))))
 
 (defun nethack-build-compile ()
@@ -575,9 +573,7 @@ Returns the buffer of the compilation process.
 Requires `make', `gcc', `bison' or `yacc', `flex' or `lex', and
 the ncurses-dev library for your system."
   ;; make fetch-lua && make install
-  (let* ((default-directory (expand-file-name
-                             (if (eq system-type 'windows-nt) "src" "")
-                             source-directory))
+  (let* ((default-directory (if (eq system-type 'windows-nt) (expand-file-name "src") default-directory))
          (compilation-cmd
           ;; Right now, since there are two make arguments passed here, the
           ;; comint mode sees this as two different compiles and gives messages
@@ -602,7 +598,9 @@ the ncurses-dev library for your system."
 
 (defun nethack-build-tiles ()
   "Compile nethack-tiles.el.gz from the XPMs in the nethack directory."
-  (nethack-gen-tiles default-directory "nethack"))
+  (let ((source-directory default-directory)
+        (default-directory (file-name-directory (directory-file-name default-directory))))
+    (nethack-gen-tiles default-directory "nethack")))
 
 
 ;;; Initialization
