@@ -116,3 +116,9 @@ These instructions are known to work on \*NIX systems and have been lightly test
     ```
 
   * Play with `M-x nethack RET`.
+
+## Testing
+Either use `(ert-run-tests-interactively)` in a live Emacs session or invoke Emacs in batch mode like so:
+```
+emacs --batch -L nethack-el -l nethack-el/test/nethack-tests.el --eval '(ert-run-tests-batch-and-exit)'
+```
