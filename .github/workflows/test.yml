@@ -1,0 +1,52 @@
+name: 'Test'
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        required: true
+        default: 'main'
+env:
+  pwd: ${{ github.event.repository.name }}
+jobs:
+  unix:
+    name: 'nethack-el tests (Nix)'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: 'Checkout ${{ github.repository }}'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - name: 'Test'
+        uses: workflow/nix-shell-action@v3
+        with:
+          packages: emacs,netcat
+          script: nix develop nixpkgs#nethack -c emacs --batch -L . -l ./test/nethack-tests.el --eval '(ert-run-tests-batch-and-exit)'
+  windows:
+    name: 'nethack-el tests (Windows)'
+    runs-on: windows-latest
+    steps:
+      - name: 'Checkout ${{ github.repository }}'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - uses: jcs090218/setup-emacs-windows@master
+        with:
+          version: "30.1"
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            make
+            openbsd-netcat
+      - name: 'Test'
+        run: >
+          & emacs --batch -L . -l ./test/nethack-tests.el --eval '(progn (setenv "PATH" (concat "C:/msys64/usr/bin;C:/msys64/ucrt64/bin;" (getenv "PATH"))) (add-to-list ''exec-path "C:/msys64/usr/bin") (ert-run-tests-batch-and-exit))'
