@@ -1051,7 +1051,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return (win_request_info *) 0;
 --- /dev/null	2025-08-24 15:06:43.804608000 -0500
 +++ nethack/win/lisp/ChangeLog	2025-08-24 15:06:25.691340793 -0500
-@@ -0,0 +1,583 @@
+@@ -0,0 +1,587 @@
++2025-10-11  George Huebner  <george@feyor.sh>
++
++	* winlisp.c (lisp_display_file): Fix double free.
++
 +2025-09-26  George Huebner  <george@feyor.sh>
 +
 +	* ../../sys/unix/hints/lisp: Add tile.c the intended way.
@@ -1637,7 +1641,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	function.
 --- /dev/null	2025-08-24 10:32:36.147906000 -0500
 +++ nethack/win/lisp/winlisp.c	2025-08-24 10:32:32.693413422 -0500
-@@ -0,0 +1,1807 @@
+@@ -0,0 +1,1806 @@
 +/* Copyright (c) Shawn Betts, Ryan Yeske, 2001                    */
 +/* NetHack may be freely redistributed.  See license for details. */
 +
@@ -3199,9 +3203,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +
 +      fclose(fp);
 +      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++      free(need_options_file_p);
 +  }
-+
-+  free(need_options_file_p);
 +
 +
 +  /* Print each command-line option, constructing a list of strings */
@@ -3282,28 +3285,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +	    lisp_string (str);
 +	    complain ? lisp_t : lisp_nil);;
 +
-+  read_string("string", &success);
-+  if (strcmp(success, "t")) {
-+      char buf[BUFSZ];
-+      dlb *fp = dlb_fopen(str, "r");
++  if (!read_string("string", &success)) {
++      if (strcmp(success, "t")) {
++          char buf[BUFSZ];
++          dlb *fp = dlb_fopen(str, "r");
 +
-+      if (fp == NULL) {
-+          if (complain) {
-+              Sprintf(buf, "cannot open file %s", str);
-+              lisp_cmd ("receive-file", lisp_string (buf); lisp_string("error"););;
++          if (fp == NULL) {
++              if (complain) {
++                  Sprintf(buf, "cannot open file %s", str);
++                  lisp_cmd ("receive-file", lisp_string (buf); lisp_string("error"););;
++              }
++              return;
 +          }
-+          return;
-+      }
 +
-+      while (dlb_fgets(buf, BUFSZ, fp) != NULL) {
-+          lisp_cmd ("receive-file", lisp_string (buf););;
-+      }
++          while (dlb_fgets(buf, BUFSZ, fp) != NULL) {
++              lisp_cmd ("receive-file", lisp_string (buf););;
++          }
 +
-+      dlb_fclose(fp);
-+      lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++          dlb_fclose(fp);
++          lisp_cmd ("receive-file", lisp_string (""); lisp_t;);;
++      }
++      free(success);
 +  }
-+
-+  free(success);
 +}
 +
 +char
