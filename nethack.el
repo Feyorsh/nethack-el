@@ -95,11 +95,11 @@
   :type '(string)
   :group 'nethack)
 
-(defcustom nethack-status-style t
+(defcustom nethack-status-style :buffer
   "Decides how the status will be displayed.
-Valid values are :map, :header-line, :mode-line, or t."
+Valid values are :map, :header-line, :mode-line, or :buffer."
   :type '(symbol)
-  :options '(:map :mode-line :header-line t)
+  :options '(:map :mode-line :header-line :buffer)
   :group 'nethack)
 
 (defcustom nethack-purge-buffers t

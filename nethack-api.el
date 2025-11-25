@@ -291,11 +291,12 @@ If CH is the character \"f\" for \"conditions\", then the string
          (nethack-with-point
           (goto-char (point-max))
           (insert (propertize (nethack-status-string nethack-status-buffer-format) 'nethack-status t))))))
-    (t
+    (:buffer
      (with-current-buffer nethack-status-buffer
        (let ((inhibit-read-only t))
          (erase-buffer)
-         (insert (nethack-status-string nethack-status-buffer-format)))))))
+         (insert (nethack-status-string nethack-status-buffer-format)))))
+    (t (user-error "unsupported nethack status style"))))
 
 
 
@@ -1146,13 +1147,12 @@ the menu is dismissed."
 
   (nethack-nhapi--let*-if (and nethack-use-tiles (display-graphic-p))
                           ((_ (selected-window)) ; layout similar to x11 port
-                           (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
                            (w-map (split-window-vertically (floor (* 0.55 (window-body-height)))))
                            (w-message (selected-window))
                            (w-inventory (when (nethack-options-set-p "perm_invent") (progn (split-window-horizontally (floor (* 0.6 (window-body-width))))))))
                           ((w-left (selected-window)) ; layout similar to curses port
                            (w-right (split-window-horizontally (floor (* 0.6 (window-width)))))
-                           (w-status (split-window-vertically (floor (* 0.95 (window-body-height)))))
+                           
                            (w-inventory (when (nethack-options-set-p "perm_invent") (progn (select-window w-right) (split-window-vertically (floor (* 0.4 (window-body-height)))))))
                            (w-map w-left)
                            (w-message w-right))
@@ -1172,13 +1172,15 @@ the menu is dismissed."
                           (set-window-dedicated-p w-map nil)
                           (set-window-buffer w-message nethack-message-buffer)
                           (set-window-dedicated-p w-message nil)
-                          (set-window-buffer w-status nethack-status-buffer)
-                          (set-window-dedicated-p w-status t)
-                          (window-preserve-size w-status nil t)
 
-                          (with-current-buffer nethack-status-buffer
-                            (setq mode-line-format nil))
-
+                          (when (eq nethack-status-style :buffer)
+                            (let ((w-status (split-window-vertically (- nethack-status-window-height) w-map)))
+                              (set-window-buffer w-status nethack-status-buffer)
+                              (set-window-dedicated-p w-status t)
+                              (window-preserve-size w-status nil t)
+                              (with-current-buffer nethack-status-buffer
+                                (setq mode-line-format nil))))
+                          
                           (select-window w-map)))
 
 
