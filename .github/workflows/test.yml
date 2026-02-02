@@ -29,7 +29,7 @@ jobs:
         uses: workflow/nix-shell-action@v3
         with:
           packages: emacs,netcat
-          script: nix develop nixpkgs#nethack -c emacs --batch -L . -l ./test/nethack-tests.el --eval '(ert-run-tests-batch-and-exit)'
+          script: nix develop --impure --expr 'with import (builtins.getFlake "nixpkgs") { }; nethack.override { stdenv = (if stdenv.hostPlatform.isLinux then gcc14Stdenv else stdenv); }' -c emacs --batch -L . -l ./test/nethack-tests.el --eval '(ert-run-tests-batch-and-exit)'
   windows:
     name: 'nethack-el tests (Windows)'
     timeout-minutes: 6
