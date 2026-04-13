@@ -1,0 +1,333 @@
+From 296427a3f9e17ed4db0dd1a5afc9c16d5f48f3cc Mon Sep 17 00:00:00 2001
+From: George Huebner <george@feyor.sh>
+Date: Fri, 3 Apr 2026 13:49:16 -0500
+Subject: [PATCH] nethack-el patch
+
+---
+ dgamelaunch.c | 41 +++++++++++++++++++++++++++
+ dgamelaunch.h |  2 ++
+ dgl-common.c  | 23 ++++++++++++++--
+ ttyrec.c      | 76 +++++++++++++++++++++++++++++++++++++++++++--------
+ ttyrec.h      |  4 +--
+ 5 files changed, 131 insertions(+), 15 deletions(-)
+
+diff --git a/dgamelaunch.c b/dgamelaunch.c
+index e23fcf8..b616a6d 100644
+--- a/dgamelaunch.c
++++ b/dgamelaunch.c
+@@ -1192,6 +1192,10 @@ game_get_column_data(struct dg_game *game,
+             snprintf(data, bufsz, "  N/A");
+             *hilite = CLR_GREEN;
+             break;
++        } else if (game->extra_info && !strcmp(game->extra_info, "lisp")) {
++            snprintf(data, bufsz, "  lisp");
++            *hilite = CLR_MAGENTA;
++            break;
+         }
+         snprintf(data, bufsz, "%3dx%3d", game->ws_col, game->ws_row);
+ 	if (showplayers)
+@@ -1528,6 +1532,42 @@ watchgame:
+ 		  setproctitle("%s [watching %s]", me->username, chosen_name);
+ 	      else
+ 		  setproctitle("<Anonymous> [watching %s]", chosen_name);
++          if (!strcmp(games[idx]->extra_info, "lisp")) {
++              int fd = open(ttyrecname, O_RDONLY);
++              char buf[4096];
++              for (;;) {
++                  fd_set rfds;
++                  FD_ZERO(&rfds);
++                  FD_SET(0, &rfds);
++                  FD_SET(fd, &rfds);
++
++                  if (!select(fd + 1, &rfds, NULL, NULL, &(struct timeval){1200, 0})) break;
++
++                  if (FD_ISSET(fd, &rfds)) {
++                      int cc = read(fd, buf, 4096);
++                      if (cc > 0) {
++                        write(1, buf, cc);
++                        idle_alarm_reset();
++                      }
++                  }
++                  if (FD_ISSET(0, &rfds)) {
++                      switch (dgl_getch()) {
++                      case EOF:
++                      case 'q':
++                          break;
++                      case 'm':
++                          if (!loggedin)
++                              loginprompt(1);
++                          if (loggedin)
++                              domailuser(chosen_name);
++                      default:
++                          continue;
++                      }
++                      break;
++                  }
++              }
++              close(fd);
++          } else {
+               if (myconfig[games[idx]->gamenum]->watch_path) {
+                   pid_t watch_child;
+                   int gnum = games[idx]->gamenum;
+@@ -1571,6 +1611,7 @@ watchgame:
+               } else {
+                   ttyplay_main (ttyrecname, 1, resizex, resizey);
+               }
++          }
+ 	      if (loggedin)
+ 		  setproctitle("%s", me->username);
+ 	      else
+diff --git a/dgamelaunch.h b/dgamelaunch.h
+index 7af66f5..007491f 100644
+--- a/dgamelaunch.h
++++ b/dgamelaunch.h
+@@ -31,10 +31,12 @@
+ # define CLR_NORMAL  COLOR_PAIR(11)   | A_NORMAL
+ # define CLR_RED     COLOR_PAIR(COLOR_RED)   | A_NORMAL
+ # define CLR_GREEN   COLOR_PAIR(COLOR_GREEN) | A_NORMAL
++# define CLR_MAGENTA COLOR_PAIR(COLOR_MAGENTA) | A_NORMAL
+ #else
+ # define CLR_NORMAL  0
+ # define CLR_RED     0
+ # define CLR_GREEN   0
++# define CLR_MAGENTA  0
+ #endif
+ extern int color_remap[];
+ 
+diff --git a/dgl-common.c b/dgl-common.c
+index 99ad0b3..08e36c9 100644
+--- a/dgl-common.c
++++ b/dgl-common.c
+@@ -523,13 +523,26 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
+ 		    if (!strcmp(myconfig[userchoice]->game_id, p1) || !strcmp(myconfig[userchoice]->game_name, p1) || !strcmp(myconfig[userchoice]->shortname, p1)) {
+ 			if (purge_stale_locks(userchoice)) {
+                             char *ttrecdir = NULL;
++                int wants_lisp = 0;
+ 			    if (myconfig[userchoice]->rcfile) {
+                                 char *rcname = NULL;
+ 				if (access (rcname = dgl_format_str(userchoice, me, myconfig[userchoice]->rc_fmt, NULL), R_OK) == -1)
+ 				    write_canned_rcfile (userchoice, rcname);
++
++                    FILE *f = fopen(rcname, "r");
++                    if (f) {
++                        char line[64];
++                        while (fgets(line, sizeof(line), f)) {
++                            char value[5];
++                            if (sscanf(line, " OPTIONS = windowtype : %4s", value) == 1 && !strcmp(value, "lisp")) {
++                                wants_lisp = 1;
++                                break;
++                            }
++                        }
++                    }
++                    fclose(f);
+                                 if (rcname) free(rcname);
+ 			    }
+-
+ 			    setproctitle("%s [playing %s]", me->username, myconfig[userchoice]->shortname);
+ 
+ 			    clear();
+@@ -546,6 +559,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
+ 				tmpstr = dgl_format_str(userchoice, me, myconfig[userchoice]->bin_args[i], NULL);
+ 				free(myconfig[userchoice]->bin_args[i]);
+ 				myconfig[userchoice]->bin_args[i] = tmpstr;
++                if (!strcmp(myconfig[userchoice]->bin_args[i], "-wlisp")) wants_lisp = 1;
+ 			    }
+ 
+ 			    signal(SIGWINCH, SIG_DFL);
+@@ -556,7 +570,7 @@ dgl_exec_cmdqueue_w(struct dg_cmdpart *queue, int game, struct dg_user *me, char
+ 			    /* launch program */
+ 			    ttyrec_main (userchoice, me->username,
+ 					 ttrecdir = dgl_format_str(userchoice, me, myconfig[userchoice]->ttyrecdir, NULL),
+-					 gen_ttyrec_filename());
++					 gen_ttyrec_filename(), wants_lisp);
+ 			    idle_alarm_set_enabled(1);
+ 			    played = 1;
+                             if (ttrecdir) free(ttrecdir);
+@@ -918,8 +932,13 @@ populate_games (int xgame, int *l, struct dg_user *me)
+ 		  games[len]->ws_col = 80;
+ 	      }
+ 
++
+               games[len]->extra_info = NULL;
+               games[len]->extra_info_weight = 0;
++              if (strstr(ttyrecname, ".lisprec")) {
++                  games[len]->extra_info_weight = 1;
++                  games[len]->extra_info = strdup("lisp");;
++              }
+               if (myconfig[game]->extra_info_file) {
+                   char *extra_info_file =
+                       dgl_format_str(game, NULL,
+diff --git a/ttyrec.c b/ttyrec.c
+index 45392c8..e8263e3 100644
+--- a/ttyrec.c
++++ b/ttyrec.c
+@@ -52,6 +52,7 @@
+ #include <sys/time.h>
+ #include <sys/wait.h>
+ #include <fcntl.h>
++#include <ctype.h>
+ 
+ #include <termios.h>
+ #include <time.h>
+@@ -72,6 +73,7 @@
+ # define XCASE 0
+ #endif
+ static void query_encoding(int game, char *username);
++static void game_idle_kill(int signal);
+ 
+ int slave;
+ pid_t dgl_parent;
+@@ -130,7 +132,7 @@ ttyrec_id(int game, char *username, char *ttyrec_filename)
+ }
+ 
+ int
+-ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
++ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename, int wants_lisp)
+ {
+   char dirname[100];
+ 
+@@ -153,13 +155,18 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
+       return 0;
+   }
+ 
++  if (wants_lisp) strcpy(strstr(ttyrec_filename, ".ttyrec"), ".lisprec");
++
+   if (ttyrec_path[strlen(ttyrec_path)-1] == '/')
+       snprintf (dirname, 100, "%s%s", ttyrec_path, ttyrec_filename);
+   else
+       snprintf (dirname, 100, "%s/%s", ttyrec_path, ttyrec_filename);
+-  ancient_encoding = myconfig[game]->encoding;
+-  if (ancient_encoding == -1)
+-      query_encoding(game, username);
++
++  if (!wants_lisp) {
++      ancient_encoding = myconfig[game]->encoding;
++      if (ancient_encoding == -1)
++          query_encoding(game, username);
++  }
+ 
+   snprintf(last_ttyrec, 512, "%s", dirname);
+ 
+@@ -171,7 +178,7 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
+     }
+   setbuf (fscript, NULL);
+ 
+-  fixtty ();
++  if (!wants_lisp) fixtty ();
+ 
+   (void) signal (SIGCHLD, finish);
+   child = fork ();
+@@ -190,17 +197,63 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
+         }
+       if (child)
+         {
+-          close (slave);
+           ipfile = gen_inprogress_lock (game, child, ttyrec_filename);
++          if (wants_lisp) {
++              char obuf[2048], stripped_obuf[2048];
++              setbuf(stdout, NULL);
++              close(0);
++
++              signal(SIGALRM, game_idle_kill);
++              for (;;) {
++                  fd_set rfd;
++                  FD_ZERO(&rfd);
++                  if (master >= 0) {
++                      FD_SET(master, &rfd);
++                  } else break;
++
++                  if (myconfig[game]->max_idle_time)
++                      alarm(myconfig[game]->max_idle_time);
++
++                  if (select(master + 1, &rfd, NULL, NULL, NULL) < 0) break;
++                  if (master < 0 || !FD_ISSET(master, &rfd)) continue;
++                  int cc = read (master, obuf, 2048);
++                  if (cc <= 0) break;
++                  write(1, obuf, cc);
++
++                  char *start = obuf, *end = obuf + cc, *dst = stripped_obuf;
++                  char *match;
++                  while ((match = memmem(start, end - start, "> ", 2))) {
++                      char *line_start;
++                      for (line_start = match; line_start > start && *(line_start - 1) != '\n'; line_start--)
++                          if (isspace(*line_start) || *line_start == '(') {
++                              line_start = match + 2;
++                              break;
++                          }
++                      memcpy(dst, start, line_start - start);
++                      dst += line_start - start;
++                      start = (*(line_start - 1) != '\n') ? line_start : memchr(line_start, '\n', end - line_start);
++                      if (start) start += 1;
++                      if (!start || start > end) start = end;
++                  }
++                  memcpy(dst, start, end - start);
++                  dst += end - start;
++                  fwrite(stripped_obuf, 1, dst - stripped_obuf, fscript);
++              }
++              done();
++          } else {
+ 	  ttyrec_id(game, username, ttyrec_filename);
+           dooutput (myconfig[game]->max_idle_time);
++          }
+         }
+       else
+-	  doshell (game, username);
++	    doshell (game, username, wants_lisp);
+     }
+ 
+   (void) fclose (fscript);
+-
++  if (wants_lisp) {
++	  int status;
++	  wait(&status);
++  } else {
+   wait_for_menu = 1;
+   input_child = fork();
+   if (input_child < 0)
+@@ -218,6 +271,7 @@ ttyrec_main (int game, char *username, char *ttyrec_path, char* ttyrec_filename)
+ 
+   remove_ipfile();
+   child = 0;
++  }
+ 
+   return 0;
+ }
+@@ -486,14 +540,14 @@ dooutput (int max_idle_time)
+ }
+ 
+ void
+-doshell (int game, char *username)
++doshell (int game, char *username, int wants_lisp)
+ {
+   (void)game; /* unused */
+   (void)username; /* unused */
+-  getslave ();
++  if (!wants_lisp) getslave ();
+   (void) close (master);
+   (void) fclose (fscript);
+-  (void) dup2 (slave, 0);
++  if (!wants_lisp) (void) dup2 (slave, 0);
+   (void) dup2 (slave, 1);
+   (void) dup2 (slave, 2);
+   (void) close (slave);
+diff --git a/ttyrec.h b/ttyrec.h
+index a8bb35a..9f14ada 100644
+--- a/ttyrec.h
++++ b/ttyrec.h
+@@ -17,11 +17,11 @@ extern void fixtty (void);
+ extern void getslave (void);
+ extern void doinput (void);
+ extern void dooutput (int max_idle_time);
+-extern void doshell (int, char *);
++extern void doshell (int, char *, int);
+ extern void finish (int);
+ extern void remove_ipfile (void);
+ 
+-extern int ttyrec_main (int, char *username, char *ttyrec_path, char* ttyrec_filename);
++extern int ttyrec_main (int, char *username, char *ttyrec_path, char* ttyrec_filename, int wants_lisp);
+ 
+ extern pid_t child; /* nethack process */
+ extern int master, slave;
+-- 
+2.53.0
+
