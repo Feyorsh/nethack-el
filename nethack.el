@@ -844,11 +844,8 @@ defense against malicious input."
   "Nethack background process sentinel.
 PROC is the process object and MSG is the exit message."
   (with-current-buffer (process-buffer proc)
-    (nethack-log (buffer-substring (point-min) (point)))
-    (nethack-safe-eval-region (point-min) (point-max))
-    (insert "Nethack " msg))
-    ;; (when (not (string-equal msg "Nethack finished"))
-    ;;    (pop-to-buffer (current-buffer)))
+    (nethack-log (concat (buffer-substring (point-min) (point)) "\n; (END)"))
+    (nethack-safe-eval-region (point-min) (point-max)))
 
   (delete-process proc)
   (unless (or (not nethack-lisprec-record) (string-match-p "exited abnormally" msg))

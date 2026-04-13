@@ -211,41 +211,51 @@ Does nothing if TIME is nil."
     (setq nethack-lisprec--seek-to nil)
     (nethack-lisprec-autoplay-pause)))
 
-(defun nethack-lisprec--playback-loop (start end time buf)
+(defun nethack-lisprec--playback-loop (start end time buf &optional streaming)
   (with-current-buffer buf
     (save-current-buffer
       (nethack-safe-eval-region start end))
     ;; save-excursion is intentionally not used here so you can observe the lisprec buffer
-    (if (search-forward-regexp " ; \\((\\(?:[0-9]+ \\)\\{3\\}[0-9]+)\\)" nil t)
-        (let* ((new-time (car (read-from-string (match-string 1))))
-               (time-delta (time-subtract new-time time))
-               (time-delta-scaled (time-convert (* nethack-lisprec-autoplay-fast-forward-multiplier
-                                                   (time-convert time-delta 'integer))
-                                                'list))
-               (t-max (time-convert nethack-lisprec-autoplay-max-delay 'list)))
-          (goto-char (1+ (match-beginning 0)))
-          (setq nethack-lisprec--timer
-                (run-at-time (cond (nethack-lisprec--seek-to ;; return nil, play next frame immediately
-                                      (when (time-less-p nethack-lisprec--seek-to new-time)
-                                        (progn
-                                          (message "Seeked to %s" (nethack-lisprec--format-time-string new-time))
-                                          (setq nethack-lisprec--seek-to nil))))
-                                   (nethack-lisprec-autoplay--fast-forward
-                                    (time-add (current-time) (if (time-less-p time-delta-scaled t-max) time-delta-scaled t-max)))
-                                   (nethack-lisprec-autoplay--enabled
-                                    (time-add (current-time) (if (time-less-p time-delta t-max) time-delta t-max)))
-                                   (t `(,most-positive-fixnum 0 0 0)))
-                             nil #'nethack-lisprec--playback-loop end (point) new-time buf)))
-      (nethack-lisprec-cancel)
-      (run-hooks 'nethack-lisprec-playback-finished-hook)
-      (kill-buffer)
-      (when nethack-purge-buffers
-        (nethack-kill-buffers)))))
+    (cond
+      ((search-forward-regexp "; \\((\\(?:[0-9]+ \\)\\{3\\}[0-9]+)\\)$" nil t)
+       (let* ((new-time (car (read-from-string (match-string 1))))
+              (time-delta (time-subtract new-time (or time '(0 0 0 0))))
+              (time-delta-scaled (time-convert (* nethack-lisprec-autoplay-fast-forward-multiplier
+                                                  (time-convert time-delta 'integer))
+                                               'list))
+              (t-max (time-convert nethack-lisprec-autoplay-max-delay 'list)))
+         (setq nethack-lisprec--timer
+               (run-at-time (cond (nethack-lisprec--seek-to ;; return nil, play next frame immediately
+                                   (when (and (not (eq nethack-lisprec--seek-to t)) (time-less-p nethack-lisprec--seek-to new-time))
+                                     (progn
+                                       (message "Seeked to %s" (nethack-lisprec--format-time-string new-time))
+                                       (setq nethack-lisprec--seek-to nil))))
+                                  (nethack-lisprec-autoplay--fast-forward
+                                   (time-add (current-time) (if (time-less-p time-delta-scaled t-max) time-delta-scaled t-max)))
+                                  (nethack-lisprec-autoplay--enabled
+                                   (time-add (current-time) (if (time-less-p time-delta t-max) time-delta t-max)))
+                                  (t `(,most-positive-fixnum 0 0 0)))
+                            nil #'nethack-lisprec--playback-loop end (point) new-time buf streaming))))
+      ((search-forward-regexp "^; (END)$" nil t)
+       (nethack-lisprec-cancel)
+       (run-hooks 'nethack-lisprec-playback-finished-hook)
+       (kill-buffer)
+       (when nethack-purge-buffers
+         (nethack-kill-buffers)))
+      (t
+       (if (not streaming)
+           (signal 'end-of-file (buffer-file-name))
+         (setq nethack-lisprec--seek-to nil)
+         (setq nethack-lisprec--timer
+               (run-at-time `(,most-positive-fixnum 0 0 0) nil
+                            #'nethack-lisprec--playback-loop end end time buf streaming)))))))
 
 ;;;###autoload
-(defun nethack-lisprec-playback (filename)
-  "Watch a recording of a nethack-el session stored in file FILENAME."
-  (interactive "f")
+(defun nethack-lisprec-playback (filename &optional streaming)
+  "Watch a recording of a nethack-el session stored in file FILENAME.
+
+If streaming is non-nil, tail the file indefinitely."
+  (interactive "f\nP")
   (when (process-live-p nethack-proc) (user-error "Current NetHack process must end for lisprec playback to occur."))
   (when nethack-lisprec--timer (user-error "A lisprec recording is already playing."))
   (nethack-lisprec-global-mode +1)
@@ -264,8 +274,7 @@ Does nothing if TIME is nil."
     (read-only-mode 1)
 
     (goto-char (point-min))
-    (nethack-lisprec--playback-loop (point-min) (point-min) '(0 0 0 0) (current-buffer))))
-
+    (nethack-lisprec--playback-loop (point-min) (point-min) nil (current-buffer) streaming)))
 
 
 (provide 'nethack-lisprec)
