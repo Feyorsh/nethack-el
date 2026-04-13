@@ -27,6 +27,7 @@
 (require 'cl-lib)
 
 (require 'nethack)
+(require 'nethack-remote)
 
 
 (defvar nethack--ert-test-directory nil)

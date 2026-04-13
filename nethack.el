@@ -701,49 +701,6 @@ The variable `nethack-program' is the name of the executable to run."
                                 nethack-program nethack-program-args))))
     (nethack-install)))
 
-;;;###autoload
-(defun nethack-remote (connection-command &optional host port)
-  "Start a game of Nethack with CONNECTION-COMMAND.
-
-CONNECTION-COMMAND is a format string with two specs, %s for host and
-%p for port.
-
-As an example, one could login to NAO with (nethack-remote \"ssh -o
-SetEnv=DGLAUTH=username:password nethack@%s\" \"nethack.alt.org\"),
-where \"nethack.alt.org\" could be substituted for \"hardfought.org\".
-"
-  (interactive (let* ((servers '("nethack.alt.org" "hardfought.org"))
-                      (protocols '(("SSH" . "ssh -o SetEnv=DGLAUTH=%d nethack@%s")
-                                   ("Telnet" . "telnet -l %d %s")))
-                      (protocol (let ((completion-extra-properties
-                                        (list :annotation-function
-                                              (lambda (p)
-                                                (format #("%s    %s" 6 8 (face font-lock-doc-face))
-                                                        (make-string (- (apply #'max (mapcar (lambda (e) (length (car e))) protocols)) (length (car (assoc-string p protocols)))) ? )
-                                                        (cdr (assoc-string p protocols)))))))
-                                   (or (completing-read "Protocol (or command to connect): " protocols nil 'confirm-after-completion)))))
-                 (when (string-match-p "%d" protocol)
-                   (setq protocol (format-spec protocol
-                                               `((?d . ,(or (getenv "DGLAUTH")
-                                                            (format "%s:%s"
-                                                                    (read-string "Username: ")
-                                                                    (read-passwd "Password: "))))))))
-                 (list protocol
-                       (when (string-match-p "%s" protocol)
-                         (completing-read "Server: " servers nil nil))
-                       (when (string-match-p "%p" protocol)
-                         (read-number "Port: ")))))
-  (if (nethack-is-running)
-      (progn
-        (message "NetHack process already running...")
-        (nethack-restore-windows))
-    (nethack-kill-buffers)
-    (when (get-buffer nethack-proc-buffer-name)
-      (kill-buffer nethack-proc-buffer-name))
-    (get-buffer-create nethack-proc-buffer-name)
-    (nethack-start (open-network-stream "nh" nethack-proc-buffer-name
-                          host port :type 'shell :shell-command connection-command))))
-
 (defun nethack-is-running ()
   "Return T if nethack is already running."
   (and (processp nethack-proc)
