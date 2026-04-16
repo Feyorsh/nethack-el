@@ -451,20 +451,19 @@ accessed 2021-04-23.")
          (category-predicates (cdr (assoc-string action action-to-category-preds)))
          (inventory (append (when (string= action "write with") '(("-" "your fingertip" . "Miscellaneous")))
                             (when (string= action "wield") '(("-" "your bare hands" . "Miscellaneous")))
-                            nethack--inventory)))
+                            nethack--inventory))
+         (metadata `(metadata
+                     ,(cons 'category 'nethack-item)
+                     ,(cons 'display-sort-function #'identity)
+                     ,(cons 'group-function
+                            (lambda (cand transform)
+                              (if transform
+                                  (format #("%s    %s" 6 8 (face font-lock-doc-face)) cand
+                                          (substring-no-properties (cadr (assoc-string cand inventory))))
+                                (cddr (assoc-string (substring-no-properties cand 0 1) inventory))))))))
     (lambda (str _pred flag)
       (pcase flag
-        ('metadata
-         (list 'metadata
-               (cons 'display-sort-function #'identity)
-               (cons 'annotation-function
-                     (lambda (cand)
-                       (format #("    %s" 4 6 (face font-lock-doc-face))
-                               (substring-no-properties (cadr (assoc-string cand inventory))))))
-               (cons 'group-function
-                     (lambda (cand transform)
-                       (if transform cand
-                         (cddr (assoc-string (substring-no-properties cand 0 1) inventory)))))))
+        ('metadata metadata)
         ('t
          (if (string-blank-p str)
              (all-completions str (cl-remove-if-not
