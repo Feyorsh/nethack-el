@@ -776,7 +776,7 @@ defense against malicious input."
         (sexps nil)
         (start-pos 0))
     (with-temp-buffer
-      (emacs-lisp-mode)
+      (delay-mode-hooks (emacs-lisp-mode))
       (insert-buffer-substring-no-properties current-buf start end)
       (catch 'done
         (while t
