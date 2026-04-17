@@ -434,6 +434,7 @@ accessed 2021-04-23.")
                                      ("take off" . (("Armor") . (t "being worn")))
                                      ("drop" . (,all-categories . ("being worn")))
                                      ("dip" . (,all-categories))
+                                     ("name" . (,all-categories))
                                      ("dip into" . (("Potions")))
                                      ("eat" . (,@(pcase polymorph
                                                   ('gelatinous-cube `(,all-categories))
