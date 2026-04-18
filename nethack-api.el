@@ -462,42 +462,43 @@ accessed 2021-04-23.")
                                   (format #("%s    %s" 6 8 (face font-lock-doc-face)) cand
                                           (substring-no-properties (cadr (assoc-string cand inventory))))
                                 (cddr (assoc-string (substring-no-properties cand 0 1) inventory))))))))
-    (lambda (str _pred flag)
-      (pcase flag
-        ('metadata metadata)
-        ('t
-         (if (string-blank-p str)
-             (all-completions str (cl-remove-if-not
-                (lambda (i)
-                  (let* ((name (cadr i))
-                         (category (cddr i))
-                         ;; yes, if you name a weapon "(wielded)" or some dumb shit like that, this will break.
-                         (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
-                    (and (member category (car category-predicates))
-                         (or (not (string= action "write on")) (string-match-p "\\(?:unlabeled scroll\\|plain spellbook\\)" name))
-                         (if (eq (cadr category-predicates) t) ;; invert match
-                             (cl-some name-matcher (cddr category-predicates))
-                           (not (cl-some name-matcher (cdr category-predicates)))))))
-                inventory))
-           (all-completions
-            str
-            (lambda (s _ _)
-              (mapcar
-               #'car
-               (cl-remove-if-not
-                (lambda (i)
-                  (let* ((name (cadr i))
-                         (category (cddr i))
-                         (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
-                    (when (and (member category (car category-predicates))
-                         (or (not (string= action "write on")) (string-match-p "\\(?:unlabeled scroll\\|plain spellbook\\)" name))
-                         (if (eq (cadr category-predicates) t) ;; invert match
-                             (cl-some name-matcher (cddr category-predicates))
-                           (not (cl-some name-matcher (cdr category-predicates)))))
-                    (or
-                     (string-match-p (regexp-quote s) (car i))
-                     (string-match-p (regexp-quote s) (cadr i))))))
-                inventory))))))))))
+    (when category-predicates
+      (lambda (str _pred flag)
+        (pcase flag
+          ('metadata metadata)
+          ('t
+           (if (string-blank-p str)
+               (all-completions str (cl-remove-if-not
+                                     (lambda (i)
+                                       (let* ((name (cadr i))
+                                              (category (cddr i))
+                                              ;; yes, if you name a weapon "(wielded)" or some dumb shit like that, this will break.
+                                              (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
+                                         (and (member category (car category-predicates))
+                                              (or (not (string= action "write on")) (string-match-p "\\(?:unlabeled scroll\\|plain spellbook\\)" name))
+                                              (if (eq (cadr category-predicates) t) ;; invert match
+                                                  (cl-some name-matcher (cddr category-predicates))
+                                                (not (cl-some name-matcher (cdr category-predicates)))))))
+                                     inventory))
+             (all-completions
+              str
+              (lambda (s _ _)
+                (mapcar
+                 #'car
+                 (cl-remove-if-not
+                  (lambda (i)
+                    (let* ((name (cadr i))
+                           (category (cddr i))
+                           (name-matcher (lambda (s) (string-match-p (format "(%s)$" (regexp-quote s)) name))))
+                      (when (and (member category (car category-predicates))
+                                 (or (not (string= action "write on")) (string-match-p "\\(?:unlabeled scroll\\|plain spellbook\\)" name))
+                                 (if (eq (cadr category-predicates) t) ;; invert match
+                                     (cl-some name-matcher (cddr category-predicates))
+                                   (not (cl-some name-matcher (cdr category-predicates)))))
+                        (or
+                         (string-match-p (regexp-quote s) (car i))
+                         (string-match-p (regexp-quote s) (cadr i))))))
+                  inventory)))))))))))
 
 (defun nethack-nhapi-yn-function (ques choices default)
   (if nethack-proc
@@ -509,14 +510,15 @@ accessed 2021-04-23.")
         (when (/= default 0)
           (setq choices (cons default choices)))
 
-        (if (and nethack-want-completing-read
-                 (string-match "\\(What do you want to \\(dip \\(.*\\) into\\|.*\\)\\? \\)\\[" ques))
-            (let* ((prompt (match-string 1 ques))
-                   (action (if (match-string 3 ques) "dip into" (match-string 2 ques)))
-                   (ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
+        (if-let* ((nethack-want-completing-read)
+                  ((string-match "\\(What do you want to \\(dip \\(.*\\) into\\|.*\\)\\? \\)\\[" ques))
+                  (prompt (match-string 1 ques))
+                  (action (if (match-string 3 ques) "dip into" (match-string 2 ques)))
+                  (filter-func (nethack-completing-read-filter action)))
+            (let ((ret (condition-case _ (completing-read prompt filter-func) (quit "\0"))))
               (while (not (or (assoc-string ret nethack--inventory) (string= ret "\0")))
                 (run-with-timer 0.01 nil (lambda () (minibuffer-message "match required")))
-                (setq ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
+                (setq ret (condition-case _ (completing-read prompt filter-func) (quit "\0"))))
               (if (and (not (string= ret "\0")) (numberp current-prefix-arg) (> current-prefix-arg 0))
                   (let* ((inhibit-quit nil)
                          (nstr (number-to-string current-prefix-arg))
@@ -576,11 +578,12 @@ accessed 2021-04-23.")
 
 (defun nethack-nhapi-getlin (ques &optional initial)
   (if nethack-proc
-      (if (and nethack-want-completing-read
-               (string-match "\\(What do you want to \\(dip \\(.*\\) into\\|.*\\)\\? \\)\\[" ques))
-            (let* ((prompt (match-string 1 ques))
-                   (action (if (match-string 3 ques) "dip into" (match-string 2 ques)))
-                   (ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
+        (if-let* ((nethack-want-completing-read)
+                  ((string-match "\\(What do you want to \\(dip \\(.*\\) into\\|.*\\)\\? \\)\\[" ques))
+                  (prompt (match-string 1 ques))
+                  (action (if (match-string 3 ques) "dip into" (match-string 2 ques)))
+                  (filter-func (nethack-completing-read-filter action)))
+            (let ((ret (condition-case _ (completing-read prompt filter-func) (quit "\0"))))
               (while (not (or (assoc-string ret nethack--inventory) (string= ret "\0")))
                 (run-with-timer 0.01 nil (lambda () (minibuffer-message "match required")))
                 (setq ret (condition-case _ (completing-read prompt (nethack-completing-read-filter action)) (quit "\0"))))
