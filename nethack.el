@@ -878,17 +878,21 @@ delete the contents, perhaps logging the text."
                      ((stringp form) form)
                      (t (prin1-to-string form)))))
       (with-current-buffer (process-buffer nethack-proc) (erase-buffer))
+      (setq nethack-at-prompt nil)
       (process-send-string nethack-proc (concat command "\n"))
       (nethack-log (format ";;; %s\n" command)))))
+
+(defun nethack--wait ()
+  (when nethack-proc
+    ;; wait until we get back to a "command" prompt before returning
+    (while (and (member (process-status nethack-proc) '(open run))
+                (not nethack-at-prompt))
+      (with-local-quit (accept-process-output nethack-proc)))))
 
 (defun nethack-send-and-wait (form)
   (when nethack-proc
     (nethack-send form)
-    ;; wait until we get back to a "command" prompt before returning
-    (setq nethack-at-prompt nil)
-    (while (and (member (process-status nethack-proc) '(open run))
-                (not nethack-at-prompt))
-      (accept-process-output nethack-proc))))
+    (nethack--wait)))
 
 (defun nethack-restore-windows ()
   "Restore NetHack window layout."
