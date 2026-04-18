@@ -76,3 +76,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 #+end_example
+
+* Embark integration
+This package allows you to use ~embark-act~/~embark-act-all~ on items in your inventory, whether that be an item under point in the inventory buffer (useful when playing with =OPTIONS=perm_invent=) or the current completing read candidate (useful when ~nethack-want-completing-read~ is set to =t=).
+
+~nethack-embark-item-map~ includes a subset of the ~completing-read~-aware extended commands that act on the inventory in addition to a few extra convenience commands.
+Of particular note is ~drop-multiple~, which acts as a more intelligent version of ~drop~ and ~drop-specific-item~ that can drop different quantities of different items selected with ~embark-select~[fn:2] in one turn.
+
+Note: ~embark-collect~ has been lightly tested but will likely behave strangely if you try to act on an item that no longer exists in your inventory.
+
+[fn:2] ~nethack-embark-item-map~ uses an augmented version of ~embark-select~ that accepts a prefix argument, so =C-u 3 <embark-select-keybind>= will select 3 of the item under point whereas just =<embark-select-keybind>= will select the whole stack.
+
+** Installation
+[[file:nethack-embark.el]] runs all necessary setup during load, so it should suffice to have something like this in your ~init.el~:
+#+begin_src elisp :exports code :eval no
+(use-package nethack-embark
+  :load-path ".../nethack-el/goodies/"
+  :after (embark nethack))
+#+end_src

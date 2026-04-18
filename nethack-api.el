@@ -1059,6 +1059,7 @@ accelerator that will be used in unassigned menus.")
   (with-current-buffer (nethack-menu-buffer menuid)
     (let ((inhibit-read-only t))
       (erase-buffer)
+      (remove-overlays)
       ;; we don't turn on `nethack-menu-mode' yet, since we do not yet know
       ;; "how" this menu is going to work.
       (setq nethack-unassigned-accelerator-index 0))))
