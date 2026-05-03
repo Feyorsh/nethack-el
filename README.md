@@ -29,11 +29,11 @@ All of the Elisp is GPLv3-or-later, and the patches are under the modified 3-cla
 
 <!-- generated with gif-screencast then `gifsicle --crop ... --scale ... --lossy 80 --colors 64 -O3 '#0-49'` -->
 ![](./images/terminal-37.gif)
-*Nethack 3.7 in `emacs -nw` with IBMGraphics ([lisprec](Lisprec) playback)*
+*Nethack 5 (formerly 3.7) in `emacs -nw` with IBMGraphics ([lisprec](Lisprec) playback)*
 
 <!-- generated with asciinema then `agg in.cast --font-family "JetBrainsMono Nerd Font Mono" out.gif` -->
 ![](./images/tiles-37.gif)
-*Nethack 3.7 in graphical Emacs with `(setq nethack-use-tiles "nethack370")`*
+*Nethack 5 (formerly 3.7) in graphical Emacs with `(setq nethack-use-tiles "nethack500")`*
 
 ## Project Status
 Save for a few cosmetic improvements and bonus features, I consider nethack-el to be mostly feature complete to the point where I have ascended using nethack-el and I prefer nethack-el to the builtin curses interface.
@@ -96,7 +96,7 @@ ttyrec -e "emacs -nw -L <NETHACK-EL_DIR> -l nethack --eval \"(progn (add-hook 'n
 If you're coming from the X11/Qt window port you may prefer playing with `(setq nethack-use-tiles "nethack")`, which draws the map with XPM images instead of text.
 
 > [!NOTE]
-> Tilesets from 3.6.7 are not compatible with those from 3.7.
+> Tilesets from 3.6.7 are not compatible with those from 5.0.0.
 > `nethack-install` will automatically generate the tileset corresponding to the version of NetHack you are building.
 > nethack-el will try to select the correct tileset by querying nethack version at runtime, but this is not foolproof (especially for variants); try advising `nethack-map-mode` or `nethack-nhapi-init-nhwindows`.
 
@@ -130,7 +130,7 @@ These instructions are known to work on \*NIX systems and have been lightly test
 
 ### Manual Build
 
-* Download either `nethack-367.tgz` from <https://nethack.org> or `git clone https://github.com/NetHack/NetHack.git` (required for using NetHack-3.7 branch)
+* Either download a tarball from <https://nethack.org/download/> or `git clone` from <https://github.com/NetHack/NetHack>
 
 * Untar the package and apply the respective patch
 
@@ -154,7 +154,7 @@ These instructions are known to work on \*NIX systems and have been lightly test
 
     ```
     $ cd sys/unix
-    $ vi hints/linux # or hints/linux.370
+    $ vi hints/linux # or hints/linux.500
     $ sh setup.sh hints/linux
     ```
 
