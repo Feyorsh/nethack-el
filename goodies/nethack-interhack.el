@@ -271,7 +271,7 @@
 
 (defun nethack-interhack--price-table (item-type)
   ;; this needs to happen at runtime, not when we add the advice
-  (let* ((37-p (string= nethack-version "3.7.0"))
+  (let* ((37-p (string= nethack-version "5.0.0"))
          (price-tables `(("scroll" . ((20 . ("identify"))
                                       (50 . ("light"))
                                       (60 . ("enchant weapon"))

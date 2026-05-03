@@ -41,7 +41,7 @@ That having been said, I'm receptive to feature requests so please open a discus
 I mostly work on things that affect how I play NetHack (i.e. my `nethackrc`), so please open an issue/PR if something doesn't work—it's likely I just don't use that feature and never ran into that particular issue.
 
 > [!IMPORTANT]
-> nethack-el currently only officially supports versions 3.6.7 and 3.7.0-WIP of vanilla NetHack.
+> nethack-el currently only officially supports versions 3.6.7 and 5.0.0 of vanilla NetHack.
 > You are welcome to open issues when using nethack-el with modern versions of NetHack (including variants) but please do not open issues with versions of NetHack older than 3.6.7.
 
 
@@ -124,7 +124,7 @@ These instructions are known to work on \*NIX systems and have been lightly test
       Make sure `C:\msys64\usr\bin` and `C:\msys64\ucrt64\bin` are in `PATH` for Emacs (`exec-path` does not work because compilation is launched as a shell command).
 
 > [!NOTE]
-> nethack-el only supports NetHack 3.7.0 on Windows.
+> nethack-el only supports NetHack 5 on Windows.
 
   * Play with `M-x nethack RET`. This should automatically detect if NetHack w/ lisp patch is installed, and if not will attempt to build it from source.
 
@@ -147,7 +147,7 @@ These instructions are known to work on \*NIX systems and have been lightly test
 
   * This may be as simple as running `sys/unix/setup.sh` to copy the Makefiles.
 
-  * The 3.6.7/3.7.0 patch includes modifications to the default Linux
+  * The 3.6.7/5.0.0 patch includes modifications to the default Linux
     hints file for enabling the lisp window port (this should also
     work on macOS); you can inspect and modify this file to e.g. add
     additional compile flags.
@@ -169,8 +169,8 @@ These instructions are known to work on \*NIX systems and have been lightly test
     ```
     
 > [!IMPORTANT]
-> **If you are using 3.7.0 on Linux or macOS, you must pass `WANT_WIN_LISP=1` to Make in order to build the lisp port.**
-> The 3.6.7 build system defaults to building the lisp port automatically, and for Windows the patched 3.7.0 GNUmakefile can _only_ build the lisp port.
+> **If you are using 5.0.0 on Linux or macOS, you must pass `WANT_WIN_LISP=1` to Make in order to build the lisp port.**
+> The 3.6.7 build system defaults to building the lisp port automatically, and for Windows the patched 5.0.0 GNUmakefile can _only_ build the lisp port.
 > See [`nethack-build-compile`](./nethack.el) for more details.
 
 * Install the Elisp sources

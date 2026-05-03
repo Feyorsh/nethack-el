@@ -54,12 +54,12 @@
   (nethack--with-version "3.6.7"
                          (should (nethack-installed-p))))
 
-(ert-deftest nethack-test-install:3.7.0 ()
-  (nethack--with-version "3.7.0"
+(ert-deftest nethack-test-install:5.0.0 ()
+  (nethack--with-version "5.0.0"
                          (should (nethack-installed-p))))
 
 (ert-deftest nethack-test-lisprec ()
-  (nethack--with-version "3.7.0"
+  (nethack--with-version "5.0.0"
                          (save-current-buffer
                            (let* (nethack-use-tiles
                                   playback-done
@@ -84,7 +84,7 @@
 
 (ert-deftest nethack-test-remote ()
   (skip-unless (executable-find "nc"))
-  (nethack--with-version "3.7.0"
+  (nethack--with-version "5.0.0"
                          (let ((nethack-server-proc (nethack-remote-server))
                                need-options-called)
                            (unwind-protect

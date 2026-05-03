@@ -17,7 +17,7 @@ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR B
 INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
---- NetHack-NetHack-3.7.0_WIP/include/config.h	2025-08-24 10:26:20.390034350 -0500
+--- NetHack-NetHack-5.0.0_Released/include/config.h	2025-08-24 10:26:20.390034350 -0500
 +++ nethack/include/config.h	2025-08-24 10:32:05.576499096 -0500
 @@ -59,12 +59,13 @@
  /* #define X11_GRAPHICS */   /* X11 interface */
@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 + *      tty, X11, mac, amii, BeOS, Qt, Gem, Gnome, lisp, shim
   */
  
- /* MAC also means MAC windows */
+ /* MACOS9 also means MAC windows */
 @@ -141,6 +142,12 @@
  #endif
  #endif
@@ -47,11 +47,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
  #ifndef DEFAULT_WINDOW_SYS
  #define DEFAULT_WINDOW_SYS "shim"
---- NetHack-NetHack-3.7.0_WIP/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
+--- NetHack-NetHack-5.0.0_Released/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
 +++ nethack/include/patchlevel.h	2025-08-24 10:32:05.576673554 -0500
 @@ -19,6 +19,8 @@
   */
- #define EDITLEVEL 137
+ #define EDITLEVEL 0
  
 +#define LISP_VERSION "0.15.1"
 +
@@ -126,7 +126,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +extern win_request_info *lisp_ctrl_nhwindow(winid, int, win_request_info *);
 +
 +#endif /* WINLISP_H */
---- NetHack-NetHack-3.7.0_WIP/include/winprocs.h	2025-08-24 14:59:57.571179579 -0500
+--- NetHack-NetHack-5.0.0_Released/include/winprocs.h	2025-08-24 14:59:57.571179579 -0500
 +++ nethack/include/winprocs.h	2025-08-24 15:30:38.894335251 -0500
 @@ -11,7 +11,7 @@
  #endif
@@ -137,9 +137,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                wp_hup, wp_guistubs, wp_ttystubs,
  #if defined(AMIGA)
                wp_amii, wp_amiv,
---- NetHack-NetHack-3.7.0_WIP/include/windconf.h	2026-04-13 10:17:15.169973151 -0500
+--- NetHack-NetHack-5.0.0_Released/include/windconf.h	2026-04-13 10:17:15.169973151 -0500
 +++ nethack/include/windconf.h	2026-04-13 10:33:46.438153121 -0500
-@@ -102,7 +102,7 @@
+@@ -106,7 +106,7 @@
   */
  
  #ifdef __GNUC__
@@ -148,7 +148,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #
  #ifdef strncasecmp
  #undef strncasecmp
---- NetHack-NetHack-3.7.0_WIP/src/mdlib.c	2025-08-24 14:59:57.651359718 -0500
+--- NetHack-NetHack-5.0.0_Released/src/mdlib.c	2025-08-24 14:59:57.651359718 -0500
 +++ nethack/src/mdlib.c	2025-08-24 15:30:38.895115826 -0500
 @@ -139,6 +139,9 @@
  #ifdef MSWIN_GRAPHICS /* win32 */
@@ -170,7 +170,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      return outbuf;
  }
  
---- NetHack-NetHack-3.7.0_WIP/src/options.c	2025-08-24 14:59:57.659282869 -0500
+--- NetHack-NetHack-5.0.0_Released/src/options.c	2025-08-24 14:59:57.659282869 -0500
 +++ nethack/src/options.c	2025-08-24 15:30:38.895976359 -0500
 @@ -1054,7 +1054,7 @@
  #endif
@@ -212,7 +212,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                  /* if we're enabling hilite_pet and petattr isn't set,
                     set it to Inverse; if we're disabling, leave petattr
                     alone so that re-enabling will get current value back
---- NetHack-NetHack-3.7.0_WIP/src/rip.c	2025-08-24 14:59:57.664589302 -0500
+--- NetHack-NetHack-5.0.0_Released/src/rip.c	2025-08-24 14:59:57.664589302 -0500
 +++ nethack/src/rip.c	2025-08-24 15:30:38.896334855 -0500
 @@ -9,7 +9,7 @@
     necessarily have to be used by a binary with multiple window-ports */
@@ -223,7 +223,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      || defined(AMII_GRAPHICS)
  #define TEXT_TOMBSTONE
  #endif
---- NetHack-NetHack-3.7.0_WIP/src/windows.c	2025-08-24 10:26:20.500371140 -0500
+--- NetHack-NetHack-5.0.0_Released/src/windows.c	2025-08-24 10:26:20.500371140 -0500
 +++ nethack/src/windows.c	2025-08-24 10:32:05.578014465 -0500
 @@ -42,6 +42,10 @@
  #ifdef MSWIN_GRAPHICS
@@ -246,7 +246,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
      { &shim_procs, 0 CHAINR(0) },
  #endif
---- NetHack-NetHack-3.7.0_WIP/src/mail.c	2025-08-24 11:44:27.222072179 -0500
+--- NetHack-NetHack-5.0.0_Released/src/mail.c	2025-08-24 11:44:27.222072179 -0500
 +++ nethack/src/mail.c	2025-08-24 11:44:35.251959507 -0500
 @@ -717,7 +717,7 @@
      if (!(mr = nh_getenv("MAILREADER")))
@@ -257,7 +257,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) execl(mr, mr, (char *) 0);
          nh_terminate(EXIT_FAILURE);
      }
---- NetHack-NetHack-3.7.0_WIP/src/cmd.c	2025-08-28 11:08:57.181900595 -0500
+--- NetHack-NetHack-5.0.0_Released/src/cmd.c	2025-08-28 11:08:57.181900595 -0500
 +++ nethack/src/cmd.c	2025-08-28 11:08:41.499298196 -0500
 @@ -1860,7 +1860,7 @@
      { '!',    "shell",
@@ -268,7 +268,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                          | CMD_NOT_AVAILABLE
  #endif /* SHELL */
                          ), NULL },
---- NetHack-NetHack-3.7.0_WIP/sys/unix/Makefile.src	2025-08-24 10:26:20.508439686 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/unix/Makefile.src	2025-08-24 10:26:20.508439686 -0500
 +++ nethack/sys/unix/Makefile.src	2025-08-24 10:32:05.578236714 -0500
 @@ -317,9 +317,12 @@
  #	$(TARGETPFX)NHMenuWindow.o $(TARGETPFX)NHMapWindow.o \
@@ -305,7 +305,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  # all windowing-system-dependent .cpp (for dependencies and such)
  WINCXXSRC = $(WINQTSRC) $(WINQT3SRC) $(WINBESRC)
  
-@@ -1279,7 +1286,7 @@
+@@ -1281,7 +1288,7 @@
  $(TARGETPFX)weapon.o: weapon.c $(HACK_H)
  $(TARGETPFX)were.o: were.c $(HACK_H)
  $(TARGETPFX)wield.o: wield.c $(HACK_H)
@@ -314,7 +314,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  $(TARGETPFX)wizard.o: wizard.c $(HACK_H)
  $(TARGETPFX)wizcmds.o: wizcmds.c $(HACK_H) ../include/func_tab.h
  $(TARGETPFX)worm.o: worm.c $(HACK_H)
-@@ -1308,6 +1315,9 @@
+@@ -1310,6 +1317,9 @@
  	$(MOCPATH) -o $@ ../win/Qt/qt_xcmd.h
  qt_yndlg.moc: $(QTn_H) ../win/Qt/qt_yndlg.h
  	$(MOCPATH) -o $@ ../win/Qt/qt_yndlg.h
@@ -324,8 +324,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  # DEPENDENCIES MUST END AT END OF FILE
  # IF YOU PUT STUFF HERE IT WILL GO AWAY
  # see make depend above
---- NetHack-NetHack-3.7.0_WIP/sys/unix/hints/include/multiw-1.370	2026-04-13 10:16:58.322021563 -0500
-+++ nethack/sys/unix/hints/include/multiw-1.370	2026-04-13 10:49:15.754660992 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/unix/hints/include/multiw-1.500	2026-04-13 10:16:58.322021563 -0500
++++ nethack/sys/unix/hints/include/multiw-1.500	2026-04-13 10:49:15.754660992 -0500
 @@ -7,15 +7,17 @@
  # on the 'make' command line.  If none are enabled, tty will be used.
  #WANT_WIN_TTY=1
@@ -345,8 +345,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #WANT_DEFAULT=Qt
  #WANT_DEFAULT=X11
  
---- NetHack-NetHack-3.7.0_WIP/sys/unix/hints/include/multiw-2.370	2026-04-13 10:16:58.322106605 -0500
-+++ nethack/sys/unix/hints/include/multiw-2.370	2026-04-13 10:49:15.754963619 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/unix/hints/include/multiw-2.500	2026-04-13 10:16:58.322106605 -0500
++++ nethack/sys/unix/hints/include/multiw-2.500	2026-04-13 10:49:15.754963619 -0500
 @@ -32,6 +32,7 @@
  ifdef WANT_WIN_ALL
  WANT_WIN_TTY=1
@@ -409,7 +409,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ifdef WANT_WIN_X11
  WINCFLAGS += -DX11_GRAPHICS
  WINSRC += $(WIINX11SRC)
---- NetHack-NetHack-3.7.0_WIP/sys/windows/GNUmakefile	2025-09-01 18:37:38.089416243 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/windows/GNUmakefile	2025-09-01 18:37:38.089416243 -0500
 +++ nethack/sys/windows/GNUmakefile	2025-09-01 13:36:33.153226446 -0500
 @@ -28,7 +28,7 @@
  # The default make target (so just typing 'mingw32-make').
@@ -529,7 +529,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  $(ONH)/%.o: $(WCURSES)/%.c $(NHLUAH) | $(ONH)
  	$(cc) $(CFLAGSNH) $(PDCINCL) $< -o$@
  
---- NetHack-NetHack-3.7.0_WIP/sys/windows/windmain.c	2025-09-01 18:37:38.101776324 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/windows/windmain.c	2025-09-01 18:37:38.101776324 -0500
 +++ nethack/sys/windows/windmain.c	2025-08-31 19:05:58.182621905 -0500
 @@ -68,6 +68,8 @@
  
@@ -549,7 +549,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #endif
  #ifdef WANT_GETHDATE
  static struct stat hbuf;
-@@ -216,7 +220,7 @@
+@@ -219,7 +223,7 @@
      //       windowtype = gc.chosen_windowtype;
      //   windowtype = gc.chosen_windowtype;
  
@@ -558,7 +558,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      nethack_enter_consoletty();
      consoletty_open(1);
  #endif
-@@ -231,8 +235,12 @@
+@@ -234,8 +238,12 @@
  #ifdef MSWIN_GRAPHICS
          windowtype = "mswin";
  #else
@@ -571,7 +571,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      }
      choose_windows(
          windowtype); /* sets all the window port function pointers */
-@@ -332,7 +340,7 @@
+@@ -335,7 +343,7 @@
  
  //    init_nhwindows(&argc, argv);
  
@@ -580,7 +580,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (WINDOWPORT(tty))
          toggle_mouse_support();
  #endif
-@@ -1053,7 +1061,7 @@
+@@ -1056,7 +1064,7 @@
  
      (void) nhclose(fd);
  
@@ -589,7 +589,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (WINDOWPORT(tty))
          prompt_result = tty_self_recover_prompt();
      else
-@@ -1070,7 +1078,7 @@
+@@ -1073,7 +1081,7 @@
                      : (prompt_result == 1)
                          ? "recover the old game"
                          : "not start a new game");
@@ -598,7 +598,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      if (istty)
          term_clear_screen();
  #endif
-@@ -1091,7 +1099,7 @@
+@@ -1094,7 +1102,7 @@
          }
      } else if (prompt_result < 0) {    /* destroy old game */
          if (eraseoldlocks()) {
@@ -607,7 +607,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              if (istty)
                  term_clear_screen(); /* display gets fouled up otherwise */
  #endif
-@@ -1170,7 +1178,7 @@
+@@ -1173,7 +1181,7 @@
      return FALSE;
  }
  
@@ -616,7 +616,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  /*
   * returns:
   *     1 if game should be recovered
-@@ -1247,6 +1255,7 @@
+@@ -1250,6 +1258,7 @@
  {
      int c, ci, ct, pl, retval = 0;
      boolean ismswin = WINDOWPORT(mswin),
@@ -624,7 +624,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              iscurses = WINDOWPORT(curses);
  
      pl = 1;
-@@ -1264,7 +1273,7 @@
+@@ -1267,7 +1276,7 @@
  
   other_ask_again:
  
@@ -633,7 +633,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          while ((ci = nhgetch()) && !(ci == '\n' || ci == 13)) {
              if (ct > 0) {
                  /* invalid answer */
-@@ -1283,7 +1292,7 @@
+@@ -1286,7 +1295,7 @@
          c = y_n("Are you sure you wish to destroy the old game, rather than try to "
                    "recover it? [yn] ");
          pl = 2;
@@ -642,9 +642,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
              c = 'n';
              ct = 0;
              goto other_ask_again;
---- NetHack-NetHack-3.7.0_WIP/sys/windows/windsys.c	2025-09-02 16:55:09.027193190 -0500
+--- NetHack-NetHack-5.0.0_Released/sys/windows/windsys.c	2025-09-02 16:55:09.027193190 -0500
 +++ nethack/sys/windows/windsys.c	2025-09-02 20:02:32.960712885 -0500
-@@ -255,13 +255,15 @@
+@@ -256,13 +256,15 @@
  #ifdef TTY_GRAPHICS
      if (iflags.window_inited)
          term_end_screen();
@@ -662,7 +662,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          (void) vsnprintf(buf, sizeof buf - sizeof "\n", s, VA_ARGS);
          Strcat(buf, "\n");
          raw_printf("%s",buf);
-@@ -352,8 +354,10 @@
+@@ -353,8 +355,10 @@
  void
  interject(int interjection_type)
  {

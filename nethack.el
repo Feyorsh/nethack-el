@@ -30,7 +30,7 @@
 ;;
 ;; Note: This package requires external libraries (if building from
 ;; source) and has been tested on Linux, macOS, and (NetHack
-;; 3.7 only) Windows.
+;; 5 only) Windows.
 ;;
 ;; Usage: M-x nethack
 
@@ -135,7 +135,7 @@ Valid values are :map, :header-line, :mode-line, or :buffer."
 (defcustom nethack-use-tiles nil
   "Name of XPM tileset to use when drawing the map and inventory."
   :type '(choice string (const nil))
-  :options '("nethack367" "nethack370")
+  :options '("nethack367" "nethack500")
   :group 'nethack)
 
 (defcustom nethack-map-mode-hook nil
@@ -489,10 +489,10 @@ See https://nethackwiki.com/wiki/Environment_variable for more information."
 (defun nethack-query-for-version ()
   "Queries the user for the NetHack version.
 
-The two supported versions are 3.6.7 and 3.7.0, although the user can
+The two supported versions are 3.6.7 and 5.0.0, although the user can
 input a different version at their own peril."
   (interactive)
-  (completing-read "NetHack version: " '("3.6.7" "3.7.0") nil nil))
+  (completing-read "NetHack version: " '("3.6.7" "5.0.0") nil nil))
 
 (defun nethack--get-version ()
   "Determine the version of a patched NetHack if such a version is
@@ -554,10 +554,10 @@ Returns the buffer of the compilation process."
   "Download the nethack source from nethack.org.
 The source is saved as nethack.tar.gz within the
 `default-directory'."
-  (let ((download-url (concat "https://github.com/NetHack/NetHack/archive/NetHack-"
+  (let ((download-url (concat "https://github.com/NetHack/NetHack/archive/refs/tags/NetHack-"
                               (pcase nethack-version
                                 ("3.6.7" "3.6.7_Released")
-                                ("3.7.0" "3.7")
+                                ("5.0.0" "5.0.0_Released")
                                 (_ (user-error "Unsupported NetHack version %s" nethack-version)))
                               ".tar.gz")))
     (url-copy-file download-url (expand-file-name "nethack.tar.gz") t)))
@@ -585,13 +585,13 @@ The source is saved as nethack.tar.gz within the
    (concat nethack-el-directory "enh-" (nethack-version-nodots) ".patch"))
   ;; patches that do not relate to the lisp port but are otherwise required to build/run nethack go here
   ;; we can assume we have grep and gzip, but we should not assume they're in /bin
-  (let ((hint-file (concat "sys/unix/hints/linux" (when (string= nethack-version "3.7.0") ".370"))))
+  (let ((hint-file (concat "sys/unix/hints/linux" (when (string= nethack-version "5.0.0") ".500"))))
     (nethack-build--replace-regexp-in-file hint-file "/bin/gzip" (executable-find "gzip"))
     (nethack-build--replace-regexp-in-file hint-file "\\(LIBCFLAGS\\+=-DSIG_RET_TYPE=__sighandler_t\\)" "#\\1"))
   (nethack-build--replace-regexp-in-file "sys/unix/sysconf" "/bin/grep" (executable-find "grep"))
   (nethack-build--replace-regexp-in-file "sys/unix/sysconf" "GDBPATH" "#GDBPATH")
   (when (eq system-type 'darwin)
-    ;; fix compiler error on 3.6.7, is harmless on 3.7
+    ;; fix compiler error on 3.6.7, is harmless on 5
     (nethack-build--replace-regexp-in-file "include/tradstdc.h" "\\(define \\(?:__\\)?warn_unused_result\\(?:__\\)?\\) .*" "\\1 __unused__")))
 
 (defun nethack-build-setup ()
@@ -602,7 +602,7 @@ The source is saved as nethack.tar.gz within the
   (pcase system-type
     ('windows-nt (mapcar (lambda (f) (copy-file f (expand-file-name (concat "src/" (file-name-nondirectory f))))) (file-expand-wildcards (expand-file-name "sys/windows/GNUmakefile*"))))
     (_ (let ((default-directory (expand-file-name "sys/unix")))
-         (process-file-shell-command (concat "./setup.sh hints/linux" (when (string= nethack-version "3.7.0") ".370")))))))
+         (process-file-shell-command (concat "./setup.sh hints/linux" (when (string= nethack-version "5.0.0") ".500")))))))
 
 (defun nethack-build-compile ()
   "Compile NetHack with make.
@@ -623,10 +623,10 @@ the ncurses-dev library for your system."
           ;; obscures the message that the build is done.  Still, it works for
           ;; now, so I'll just need to remember that it's currently a little
           ;; HACK-y.
-          (concat (when (string= nethack-version "3.7.0")
+          (concat (when (string= nethack-version "5.0.0")
 		    (format "make fetch%slua && " (if (eq system-type 'windows-nt) "" "-")))
                   "make PREFIX=" nethack-build-directory
-                  (when (string= nethack-version "3.7.0")
+                  (when (string= nethack-version "5.0.0")
                     " WANT_WIN_TTY=1 WANT_WIN_CURSES=1 WANT_WIN_LISP=1")
                   (unless (eq system-type 'windows-nt) " all install")))
          (compilation-buffer
@@ -666,7 +666,7 @@ Do not download (but do untar) if NO-DOWNLOAD-P is non-nil."
             (y-or-n-p "Need to (re)build the NetHack program, do it now?"))
         (progn
           (setq-default nethack-version (or version (nethack-query-for-version)))
-          (when (and (eq system-type 'windows-nt) (not (string= nethack-version "3.7.0")))
+          (when (and (eq system-type 'windows-nt) (not (string= nethack-version "5.0.0")))
             (user-error "NetHack version %s is not supported on Windows" nethack-version))
           (nethack-build no-download-p))
       (message "NetHack not activated"))))
