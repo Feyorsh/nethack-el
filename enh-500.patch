@@ -47,6 +47,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #ifdef SHIM_GRAPHICS
  #ifndef DEFAULT_WINDOW_SYS
  #define DEFAULT_WINDOW_SYS "shim"
+--- NetHack-NetHack-5.0.0_Released/include/global.h	2026-08-13 01:17:44.292041800 -0700
++++ nethack/include/global.h	2026-08-13 01:16:31.639568658 -0700
+@@ -259,7 +259,7 @@
+ #endif
+ 
+ #if defined(X11_GRAPHICS) || defined(QT_GRAPHICS) || defined(GNOME_GRAPHICS) \
+-    || defined(MSWIN_GRAPHICS)
++    || defined(MSWIN_GRAPHICS) || defined(LISP_GRAPHICS)
+ #ifndef NO_TILE_C
+ #ifndef TILES_IN_GLYPHMAP
+ #define TILES_IN_GLYPHMAP
 --- NetHack-NetHack-5.0.0_Released/include/patchlevel.h	2025-08-24 10:26:20.396545904 -0500
 +++ nethack/include/patchlevel.h	2025-08-24 10:32:05.576673554 -0500
 @@ -19,6 +19,8 @@
@@ -396,7 +407,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
  WINCFLAGS=
  WINSRC =
-@@ -100,6 +107,12 @@
+@@ -100,6 +107,14 @@
  WINOBJ0 += $(WINCURSESOBJ)
  endif
  
@@ -404,6 +415,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 +WINCFLAGS += -DLISP_GRAPHICS
 +WINSRC += $(WINLISPSRC)
 +WINOBJ0 += $(WINLISPOBJ)
++XTRASRC += tile.c
++XTRAOBJ += $(TARGETPFX)tile.o
 +endif
 +
  ifdef WANT_WIN_X11

@@ -775,7 +775,7 @@ Assumes nethack is not already running."
     (with-current-buffer nethack-map-buffer (nethack-map-mode)))
   (nethack-command-redraw-screen 2))
 
-(defvar nethack-tiles-scale nil)
+(defvar nethack-tiles-scale 1.0)
 (defun nethack-rescale-tiles ()
   (save-excursion
     (with-current-buffer nethack-map-buffer
